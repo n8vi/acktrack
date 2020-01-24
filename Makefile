@@ -1,10 +1,10 @@
 CFLAGS=-ggdb
 LDLIBS = -lpcap
 
-all: client
+all: client testpcap1
 
 clean:
 	rm -fr *.o client
 
 test: all
-	./client 127.0.0.1 22
+	sudo ./client irc.freenode.net 6667

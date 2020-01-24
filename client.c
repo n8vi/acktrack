@@ -8,7 +8,7 @@
 #include <netdb.h> 
 #include <errno.h>
 #include <arpa/inet.h>
-
+#include <pcap.h>
 
 void error(char *msg)
 {
@@ -16,12 +16,31 @@ void error(char *msg)
     exit(0);
 }
 
+void callback(u_char *useless,const struct pcap_pkthdr* pkthdr,const u_char*
+        packet)
+{
+  static int count = 1;
+
+  printf("\nPacket number [%d], length of this packet is: %d\n", count++, pkthdr->len);
+}
+
+
 int getsocketinfo(int sck)
 {
     struct sockaddr_in laddr;
     struct sockaddr_in raddr;
     socklen_t len;
     int ret;
+    char errbuf[PCAP_ERRBUF_SIZE];
+    pcap_t *descr;
+    struct pcap_pkthdr hdr;
+    const u_char *packet;
+    const char source[50];
+    const char dest[50];
+    const char filter[100];
+    struct bpf_program fp;
+    bpf_u_int32 pNet;
+    bpf_u_int32 pMask;
 
     printf("socket id %d\n", sck);
 
@@ -37,14 +56,42 @@ int getsocketinfo(int sck)
     if (ret == -1)
         return -1;
 
-    printf("%s:%d -> %s:%d\n", (char*)inet_ntoa(laddr.sin_addr), ntohs(laddr.sin_port), (char*)inet_ntoa(raddr.sin_addr), ntohs(raddr.sin_port));
+    descr = pcap_open_live("any", BUFSIZ, 0, -1,errbuf);
 
-/*
-    printf("Peer IP address: %s\n", (char*)inet_ntoa(raddr.sin_addr));
-    printf("Peer port      : %d\n", ntohs(raddr.sin_port));
-    printf("Socket IP address: %s\n", (char*)inet_ntoa(laddr.sin_addr));
-    printf("Socket port      : %d\n", ntohs(laddr.sin_port));
-*/
+    if(descr == NULL)
+    {
+        printf("pcap_open_live(): %s\n",errbuf);
+        exit(1);
+    }
+
+    sprintf((char*)source, "src host %s and src port %d", 
+        (char*)inet_ntoa(raddr.sin_addr), 
+        ntohs(raddr.sin_port)
+        );
+
+    sprintf((char*)dest, "dst host %s and dst port %d", 
+        (char*)inet_ntoa(laddr.sin_addr), 
+        ntohs(laddr.sin_port)
+        );
+
+    sprintf((char *)filter, "%s and %s", source, dest);
+    /* yes, there's a good reason to do this in two parts */
+
+    printf("%s\n", filter);
+
+    pcap_lookupnet("any", &pNet, &pMask, errbuf);
+
+    if(pcap_compile(descr, &fp, filter, 0, pNet) == -1) {
+        printf("\npcap_compile failed\n");
+        exit(1);
+        }
+
+    if(pcap_setfilter(descr, &fp) == -1){
+        printf("\npcap_setfilter() failed\n");
+        exit(1);
+        }
+
+    pcap_loop(descr, -1, callback, NULL);
 
     return 0;
 }
@@ -91,9 +138,6 @@ int main(int argc, char *argv[])
          (char *)&serv_addr.sin_addr.s_addr,
          server->h_length);
     serv_addr.sin_port = htons(portno);
-
-    printf("\npreconnect: ");
-    showsocketinfo(sockfd);
 
     if (connect(sockfd,(struct sockaddr *)&serv_addr,sizeof(serv_addr)) < 0) 
         error("ERROR connecting");
