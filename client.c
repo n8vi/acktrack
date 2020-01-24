@@ -48,11 +48,13 @@ pcap_t *capsck_create(int sck, char* errbuf)
 
     if (ret == -1) {
         if (errno == ENOTCONN)
-            strcpy(errbuf, "Socket isn't connected\n");
+            // Gotta connect before trying this, or we don't have two endpoints to bind to
+            strcpy(errbuf, "Socket isn't connected");
         else if (errno == EBADF)
-            strcpy(errbuf, "Bad socket descriptor\n");
+            // this integer not returned from socket(), or close() has been called on it
+            strcpy(errbuf, "Bad socket descriptor");
         else
-            strcpy(errbuf, "Unknown error\n");
+            strcpy(errbuf, "Unknown error getting remote endpoint");
 
         return NULL;
         }
@@ -60,16 +62,24 @@ pcap_t *capsck_create(int sck, char* errbuf)
     ret = getsockname(sck, (struct sockaddr*)&laddr, &len);
 
     if (ret == -1) {
+        // the first two errors here should have been caught above on the remote end, but just in case ...
         if (errno == ENOTCONN)
-            strcpy(errbuf, "Socket isn't connected\n");
+            // Gotta connect before trying this, or we don't have two endpoints to bind to
+            strcpy(errbuf, "Socket isn't connected");
         else if (errno == EBADF)
-            strcpy(errbuf, "Bad socket descriptor\n");
+            // this integer not returned from socket(), or close() has been called on it
+            strcpy(errbuf, "Bad socket descriptor");
         else
-            strcpy(errbuf, "Unknown error\n");
+            strcpy(errbuf, "Unknown error getting local endpoint");
 
         return NULL;
         }
 
+    // to make this work on windows it may be necessary to get an interface list with pcap_findalldevs_ex()
+    // and pcap_open_live all interfaces, unless "any" is present (at which point we know it's linux)
+    // Why not check the routing table and pick the interface based on that you ask?  INBOUND packets are not
+    // bound to the rules of OUR routing table, they can come from literally anywhere.  Also, that sounds like
+    // a lot more work.
     descr = pcap_open_live("any", BUFSIZ, 0, -1,errbuf);
 
     if(descr == NULL)
@@ -88,16 +98,20 @@ pcap_t *capsck_create(int sck, char* errbuf)
         ntohs(laddr.sin_port)
         );
 
-    /* inet_ntoa returns a static buffer so we can't just do this all at once */
+    // inet_ntoa returns a static buffer so we can't just do this all at once 
     sprintf((char *)filter, "%s and %s", source, dest);
 
     pcap_lookupnet("any", &pNet, &pMask, errbuf);
 
+    // compile the filter string we built above into a BPF binary.  The string, by the way, can be tested with
+    // tshark or wireshark
+    // printf("PCAP filter: %s\n", filter)
     if(pcap_compile(descr, &fp, filter, 0, pNet) == -1) {
         strcpy(errbuf, "pcap_compile failed");
         return NULL;
         }
 
+    // Load the compiled filter into the kernel
     if(pcap_setfilter(descr, &fp) == -1){
         strcpy(errbuf, "pcap_setfilter failed");
         return NULL;
@@ -108,6 +122,8 @@ pcap_t *capsck_create(int sck, char* errbuf)
 
 void capsck_dispatch(pcap_t *descr)
 {
+    // to make this work on windows it may be necessary to pcap_dispatch() the entire list of interfaces.
+    // See comments above next to pcap_open_live()
     pcap_dispatch(descr, -1, capsck_callback, NULL);
 }
 
@@ -167,7 +183,11 @@ int main(int argc, char *argv[])
         }
         
 	
-
+    // You can ignore the stuff below, it's pasted from a sockets programming client example, as is a lot
+    // of the code above.  The infinite loop above currently ensures this code is never reached, but I'll 
+    // leave it here in case you'd like to play with it.  In my Makefile, I have a "make test" target that
+    // contacts an irc server, since those are chatty immediately without requiring I send them anything.
+    // The code below is likely to confuse an irc server.
 
     printf("Please enter the message: ");
     bzero(buffer,256);
