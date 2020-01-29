@@ -26,13 +26,13 @@ void capsck_callback(u_char *useless,const struct pcap_pkthdr* pkthdr,const u_ch
 }
 
 
-pcap_t *capsck_create(int sck, char* errbuf)
+pcap_t **capsck_create(int sck, char* errbuf)
 {
     struct sockaddr_in laddr;
     struct sockaddr_in raddr;
     socklen_t len;
     int ret;
-    pcap_t *descr;
+    static pcap_t *descr[2] = {NULL,NULL};
     struct pcap_pkthdr hdr;
     const u_char *packet;
     const char source[50];
@@ -56,7 +56,7 @@ pcap_t *capsck_create(int sck, char* errbuf)
         else
             strcpy(errbuf, "Unknown error getting remote endpoint");
 
-        return NULL;
+        return descr;
         }
 
     ret = getsockname(sck, (struct sockaddr*)&laddr, &len);
@@ -72,7 +72,7 @@ pcap_t *capsck_create(int sck, char* errbuf)
         else
             strcpy(errbuf, "Unknown error getting local endpoint");
 
-        return NULL;
+        return descr;
         }
 
     // to make this work on windows it may be necessary to get an interface list with pcap_findalldevs_ex()
@@ -80,12 +80,15 @@ pcap_t *capsck_create(int sck, char* errbuf)
     // Why not check the routing table and pick the interface based on that you ask?  INBOUND packets are not
     // bound to the rules of OUR routing table, they can come from literally anywhere.  Also, that sounds like
     // a lot more work.
-    descr = pcap_open_live("any", BUFSIZ, 0, -1,errbuf);
+    descr[0] = pcap_open_live("any", BUFSIZ, 0, -1,errbuf);
+    descr[1] = NULL;
 
-    if(descr == NULL)
+    printf("my descriptor is %p\n", descr[0]);
+
+    if(descr[0] == NULL)
     {
         strcpy(errbuf, "pcap_compile failed");
-        return NULL;
+        return descr;
     }
 
     sprintf((char*)source, "src host %s and src port %d", 
@@ -106,13 +109,13 @@ pcap_t *capsck_create(int sck, char* errbuf)
     // compile the filter string we built above into a BPF binary.  The string, by the way, can be tested with
     // tshark or wireshark
     // printf("PCAP filter: %s\n", filter)
-    if(pcap_compile(descr, &fp, filter, 0, pNet) == -1) {
+    if(pcap_compile(descr[0], &fp, filter, 0, pNet) == -1) {
         strcpy(errbuf, "pcap_compile failed");
         return NULL;
         }
 
     // Load the compiled filter into the kernel
-    if(pcap_setfilter(descr, &fp) == -1){
+    if(pcap_setfilter(descr[0], &fp) == -1){
         strcpy(errbuf, "pcap_setfilter failed");
         return NULL;
         }
@@ -120,11 +123,15 @@ pcap_t *capsck_create(int sck, char* errbuf)
     return descr;
 }
 
-void capsck_dispatch(pcap_t *descr)
+void capsck_dispatch(pcap_t **descr)
 {
     // to make this work on windows it may be necessary to pcap_dispatch() the entire list of interfaces.
     // See comments above next to pcap_open_live()
-    pcap_dispatch(descr, -1, capsck_callback, NULL);
+
+    while(*descr) {
+        pcap_dispatch(*descr, -1, capsck_callback, NULL);
+        descr++;
+        }
 }
 
 int main(int argc, char *argv[])
@@ -134,7 +141,7 @@ int main(int argc, char *argv[])
     char errbuf[PCAP_ERRBUF_SIZE];
     struct sockaddr_in serv_addr;
     struct hostent *server;
-    pcap_t *capsck;
+    pcap_t **capsck;
     struct timeval t;
     int i;
 
@@ -165,8 +172,9 @@ int main(int argc, char *argv[])
 
     capsck = capsck_create(sockfd, errbuf);
 
-    if (capsck == NULL) {
-        printf("%s\n", errbuf);
+    if (capsck[0] == NULL) {
+        fprintf(stderr, "%s\n", errbuf);
+        exit(0);
         }
 
     // Perhaps in a thread?
