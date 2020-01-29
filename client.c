@@ -25,6 +25,26 @@ void capsck_callback(u_char *useless,const struct pcap_pkthdr* pkthdr,const u_ch
   printf("\nPacket number [%d], length of this packet is: %d\n", count++, pkthdr->len);
 }
 
+pcap_t **capsck_openallinterfaces(char* errbuf)
+{
+    pcap_if_t *alldevs;
+    pcap_if_t *d;
+    int i=0;
+
+    if (pcap_findalldevs(&alldevs, errbuf) == -1)
+        return NULL;
+
+    for (d=alldevs; d != NULL; d = d->next) {
+        printf("%d. %s\n", ++i, d->name);
+        if (d->description)
+            printf(" (%s)\n", d->description);
+        else
+            printf("no descr\n");
+        }
+
+    exit(0);
+}
+    
 
 pcap_t **capsck_create(int sck, char* errbuf)
 {
@@ -80,10 +100,16 @@ pcap_t **capsck_create(int sck, char* errbuf)
     // Why not check the routing table and pick the interface based on that you ask?  INBOUND packets are not
     // bound to the rules of OUR routing table, they can come from literally anywhere.  Also, that sounds like
     // a lot more work.
+
+
+    /*
+    capsck_openallinterfaces(errbuf);
+    exit(0);
+    */
+
+
     descr[0] = pcap_open_live("any", BUFSIZ, 0, -1,errbuf);
     descr[1] = NULL;
-
-    printf("my descriptor is %p\n", descr[0]);
 
     if(descr[0] == NULL)
     {
