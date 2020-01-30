@@ -1,10 +1,13 @@
 CFLAGS=-ggdb
 LDLIBS = -lpcap
+SRC=$(wildcard *.c)
+BINS=$(patsubst %.c,%,$(SRC))
 
-all: client
+
+all: $(BINS)
 
 clean:
-	rm -fr *.o client
+	rm -fr *.o $(BINS)
 
 test: all
 	# make a connnection to freenode IRC as a demo.  IRC servers immediately send packets on connect, so
