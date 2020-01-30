@@ -1,3 +1,5 @@
 *.o
 client
 .*.sw*
+.vs
+Debug

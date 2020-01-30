@@ -1,0 +1,12 @@
+Example code for creating a packet capture filtered to capture traffic associated with a given
+socket can be found in "client.c"
+
+Example linux/windows cross-platform libpcap code can be found in iflist.c.
+
+Under linux, "make" builds both programs and "make test" runs the code in client.c under gdb.
+
+Under windows, iflist.c can be built with vidual studio by loading iflist.sln.
+
+The goal is to combine all lessons learned here into a single file "pcapsocket.c", which has
+the functions to build and initialize a pcap filter to capture all packets related to a
+socket on all interfaces.  At some point, expect this repository to contain only that.
