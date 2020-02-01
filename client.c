@@ -27,14 +27,24 @@ void capsck_callback(u_char *useless,const struct pcap_pkthdr* pkthdr,const u_ch
 
 pcap_t **capsck_openallinterfaces(char* errbuf)
 {
+    pcap_addr_t *a;
     pcap_if_t *alldevs;
     pcap_if_t *d;
     int i=0;
+    int has_ipv4_addr;
 
     if (pcap_findalldevs(&alldevs, errbuf) == -1)
         return NULL;
 
     for (d=alldevs; d != NULL; d = d->next) {
+        has_ipv4_addr = 0;
+        for(a=d->addresses; a; a=a->next) {
+            if (a->addr->sa_family == AF_INET)
+                has_ipv4_addr = 1;
+            }
+        if (! has_ipv4_addr)
+            continue;
+        
         printf("%d. %s\n", ++i, d->name);
         if (d->description)
             printf(" (%s)\n", d->description);
@@ -101,11 +111,9 @@ pcap_t **capsck_create(int sck, char* errbuf)
     // bound to the rules of OUR routing table, they can come from literally anywhere.  Also, that sounds like
     // a lot more work.
 
-
-    /*
-    capsck_openallinterfaces(errbuf);
-    exit(0);
-    */
+/*
+    descr = capsck_openallinterfaces(errbuf); 
+*/
 
 
     descr[0] = pcap_open_live("any", BUFSIZ, 0, -1,errbuf);
@@ -170,6 +178,13 @@ int main(int argc, char *argv[])
     pcap_t **capsck;
     struct timeval t;
     int i;
+
+
+/*
+    capsck_openallinterfaces(errbuf);
+    exit(0);
+*/
+    
 
 
     char buffer[256];
