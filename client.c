@@ -44,6 +44,10 @@ pcap_t **capsck_openallinterfaces(char* errbuf)
             }
         if (! has_ipv4_addr)
             continue;
+
+        /* 1) count interfaces and place into another linked list */
+        /* 2) allocate enough memory for array based on count */
+        /* 3) unwind linked list into array */
         
         printf("%d. %s\n", ++i, d->name);
         if (d->description)
