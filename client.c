@@ -29,9 +29,15 @@ pcap_t **capsck_openallinterfaces(char* errbuf)
 {
     pcap_addr_t *a;
     pcap_if_t *alldevs;
+    pcap_if_t *ipv4devs;
     pcap_if_t *d;
+    pcap_if_t *m = NULL;
+    pcap_if_t *f = NULL;
+    pcap_if_t *p = NULL;
     int i=0;
+    int c=0;
     int has_ipv4_addr;
+    pcap_t **descr;
 
     if (pcap_findalldevs(&alldevs, errbuf) == -1)
         return NULL;
@@ -45,19 +51,45 @@ pcap_t **capsck_openallinterfaces(char* errbuf)
         if (! has_ipv4_addr)
             continue;
 
-        /* 1) count interfaces and place into another linked list */
-        /* 2) allocate enough memory for array based on count */
-        /* 3) unwind linked list into array of newly opened pcap handles */
-        /* 4) properly deallocate all linked lists!  */
-        
+        p = m;
+        m = malloc(sizeof(pcap_if_t));
+        memcpy(m,d,sizeof(d));
+        m->next = NULL;
+        p->next = m;
+        if (!f)
+            f = m;
+        c++;
+/*       
         printf("%d. %s\n", ++i, d->name);
         if (d->description)
             printf(" (%s)\n", d->description);
         else
             printf("no descr\n");
+*/
         }
 
-    exit(0);
+    descr = malloc(sizeof(pcap_t *) * (c+1));
+    i = 0;
+
+    for (d=f; d!= NULL; d = d->next) {
+        descr[i] = pcap_open_live(d->name, BUFSIZ, 0, -1,errbuf);
+        i++;
+        }
+
+    descr[i] = NULL;
+
+    printf("good so far\n");
+
+
+    /* [x] 1) count interfaces and place into another linked list */
+    /* [x] 2) allocate enough memory for array based on count */
+    /* [x] 3) unwind linked list into array of newly opened pcap handles */
+    /* [ ] 4) properly deallocate all linked lists!  */
+
+    pcap_freealldevs(alldevs);
+
+    return(descr);
+
 }
     
 
@@ -67,7 +99,9 @@ pcap_t **capsck_create(int sck, char* errbuf)
     struct sockaddr_in raddr;
     socklen_t len;
     int ret;
-    static pcap_t *descr[2] = {NULL,NULL};
+    // static pcap_t *descr[2] = {NULL,NULL};
+    pcap_t **descr;
+    // descr[0] = pcap_open_live("any", BUFSIZ, 0, -1,errbuf);
     struct pcap_pkthdr hdr;
     const u_char *packet;
     const char source[50];
@@ -116,9 +150,7 @@ pcap_t **capsck_create(int sck, char* errbuf)
     // bound to the rules of OUR routing table, they can come from literally anywhere.  Also, that sounds like
     // a lot more work.
 
-/*
     descr = capsck_openallinterfaces(errbuf); 
-*/
 
 
     descr[0] = pcap_open_live("any", BUFSIZ, 0, -1,errbuf);
