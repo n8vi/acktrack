@@ -48,6 +48,7 @@ pcap_t **capsck_openallinterfaces(char* errbuf)
         /* 1) count interfaces and place into another linked list */
         /* 2) allocate enough memory for array based on count */
         /* 3) unwind linked list into array of newly opened pcap handles */
+        /* 4) properly deallocate all linked lists!  */
         
         printf("%d. %s\n", ++i, d->name);
         if (d->description)
