@@ -99,8 +99,8 @@ pcap_t **capsck_create(int sck, char* errbuf)
     struct sockaddr_in raddr;
     socklen_t len;
     int ret;
-    // static pcap_t *descr[2] = {NULL,NULL};
-    pcap_t **descr;
+    static pcap_t *descr[2] = {NULL,NULL};
+    // pcap_t **descr;
     // descr[0] = pcap_open_live("any", BUFSIZ, 0, -1,errbuf);
     struct pcap_pkthdr hdr;
     const u_char *packet;
@@ -150,7 +150,7 @@ pcap_t **capsck_create(int sck, char* errbuf)
     // bound to the rules of OUR routing table, they can come from literally anywhere.  Also, that sounds like
     // a lot more work.
 
-    descr = capsck_openallinterfaces(errbuf); 
+    // descr = capsck_openallinterfaces(errbuf); 
 
 
     descr[0] = pcap_open_live("any", BUFSIZ, 0, -1,errbuf);
