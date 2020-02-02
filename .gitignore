@@ -1,5 +1,6 @@
 *.o
 client
+iflist
 .*.sw*
 .vs
 Debug
