@@ -1,175 +1,343 @@
-/*
- * Copyright (c) 1999 - 2005 NetGroup, Politecnico di Torino (Italy)
- * Copyright (c) 2005 - 2006 CACE Technologies, Davis (California)
- * All rights reserved.
- *
- * Redistribution and use in source and binary forms, with or without
- * modification, are permitted provided that the following conditions
- * are met:
- *
- * 1. Redistributions of source code must retain the above copyright
- * notice, this list of conditions and the following disclaimer.
- * 2. Redistributions in binary form must reproduce the above copyright
- * notice, this list of conditions and the following disclaimer in the
- * documentation and/or other materials provided with the distribution.
- * 3. Neither the name of the Politecnico di Torino, CACE Technologies 
- * nor the names of its contributors may be used to endorse or promote 
- * products derived from this software without specific prior written 
- * permission.
- *
- * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
- * "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
- * LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR
- * A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT
- * OWNER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL,
- * SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT
- * LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
- * DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY
- * THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
- * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
- * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
- *
- */
-
-#ifdef _MSC_VER
-/*
- * we do not want the warnings about the old deprecated and unsecure CRT functions
- * since these examples can be compiled under *nix as well
- */
-#define _CRT_SECURE_NO_WARNINGS
-#endif
-
+#include <stdlib.h>
+#include <string.h>
+#include <stdio.h>
+#include <sys/types.h>
+#include <errno.h>
 #include "pcap.h"
 
 #ifndef WIN32
-    #include <netdb.h>
-    #include <sys/socket.h>
-    #include <netinet/in.h>
-    #include <stdlib.h>
+#include <unistd.h>
+#include <sys/socket.h>
+#include <netinet/in.h>
+#include <netdb.h> 
+#include <arpa/inet.h>
+#include <sys/select.h>
 #else
-    #include <winsock.h>
+#include <windows.h>
+#include <winsock.h>
+#define bzero(b,len) (memset((b), '\0', (len)), (void) 0)
+#define bcopy(b1,b2,len) (memmove((b2), (b1), (len)), (void) 0)
+#define PCAP_NETMASK_UNKNOWN 0xffffffff
+#endif
+
+#ifndef SOCKET_ERROR
+#define SOCKET_ERROR (-1)
 #endif
 
 
-// Function prototypes
-void ifprint(pcap_if_t *d);
-char *iptos(u_long in);
-char* ip6tos(struct sockaddr *sockaddr, char *address, int addrlen);
 
-
-int main()
+void error(char *msg)
 {
-    pcap_if_t *alldevs;
-    pcap_if_t *d;
-    char errbuf[PCAP_ERRBUF_SIZE+1];
-    
-    /* Retrieve the device list */
-    if(pcap_findalldevs(&alldevs, errbuf) == -1)
-    {
-        fprintf(stderr,"Error in pcap_findalldevs: %s\n", errbuf);
-        exit(1);
-    }
-    
-    /* Scan the list printing every entry */
-    for(d=alldevs;d;d=d->next)
-    {
-        ifprint(d);
-    }
+    perror(msg);
+    exit(0);
+}
 
-    /* Free the device list */
+void capsck_callback(u_char *useless,const struct pcap_pkthdr* pkthdr,const u_char*
+        packet)
+{
+  static int count = 1;
+
+  printf("\nPacket number [%d], length of this packet is: %d\n", count++, pkthdr->len);
+}
+
+pcap_t **capsck_openallinterfaces(char *filter, char* errbuf)
+{
+    pcap_addr_t *a;
+    pcap_if_t *alldevs;
+    pcap_if_t *ipv4devs;
+    pcap_if_t *d;
+    pcap_if_t *m = NULL;
+    pcap_if_t *f = NULL;
+    pcap_if_t *p = NULL;
+    int i=0;
+    int c=0;
+    int has_ipv4_addr;
+    pcap_t **descr;
+    struct bpf_program fp;
+
+
+    if (pcap_findalldevs(&alldevs, errbuf) == -1)
+        return NULL;
+
+    for (d=alldevs; d != NULL; d = d->next) {
+        // printf("%s ...\n", d->name);
+        has_ipv4_addr = 0;
+        for(a=d->addresses; a; a=a->next) {
+            if (a->addr->sa_family == AF_INET)
+                has_ipv4_addr = 1;
+            }
+        if (! has_ipv4_addr) {
+            // printf("  %s has no ipv4\n", d->name);
+            continue;
+            }
+
+        printf("  %s has ipv4.  Copying to new list ...\n", d->name);
+
+        p = m;
+        m = malloc(sizeof(pcap_if_t));
+        memcpy(m,d,sizeof(pcap_if_t));
+        m->next = NULL;
+        if (p)
+            p->next = m;
+        if (!f)
+            f = m;
+        c++;
+
+        printf("  %s has ipv4.  Copied to %s\n", d->name, m->name);
+/*       
+        printf("%d. %s\n", ++i, d->name);
+        if (d->description)
+            printf(" (%s)\n", d->description);
+        else
+            printf("no descr\n");
+*/
+        }
+
+    descr = malloc(sizeof(pcap_t *) * (c+1));
+    i = 0;
+
+    for (d=f; d!= NULL; d = d->next) {
+        printf("pcap_open_live(%s)\n", d->name);
+        descr[i] = pcap_open_live(d->name, BUFSIZ, 0, -1,errbuf);
+
+        if(descr[i] == NULL) {
+            sprintf(errbuf, "pcap_open_live failed for interface %s", d->name);
+            descr[0] = NULL;
+            /* ACTUALLY DEALLOCATE AND RETURN NULL HERE INSTEAD */
+            return descr;
+            }
+
+        /* next step happens here */
+        /* need to either pass filter string in here, or combine both functions */
+    // compile the filter string we built above into a BPF binary.  The string, by the way, can be tested with
+    // tshark or wireshark
+    // printf("PCAP filter: %s\n", filter)
+        if (pcap_compile(descr[i], &fp, filter, 0, PCAP_NETMASK_UNKNOWN) == -1) {
+            strcpy(errbuf, "pcap_compile failed");
+            return NULL;
+        }
+
+        // Load the compiled filter into the kernel
+        if (pcap_setfilter(descr[i], &fp) == -1) {
+            strcpy(errbuf, "pcap_setfilter failed");
+            return NULL;
+        }
+
+        i++;
+        }
+
+    descr[i] = NULL;
+
+
+    /* [x] 1) count interfaces and place into another linked list */
+    /* [x] 2) allocate enough memory for array based on count */
+    /* [x] 3) unwind linked list into array of newly opened pcap handles */
+    /* [ ] 4) properly deallocate all linked lists!  */
+
     pcap_freealldevs(alldevs);
 
-    return 1;
+    return(descr);
+
 }
+    
 
-
-
-/* Print all the available information on the given interface */
-void ifprint(pcap_if_t *d)
+pcap_t **capsck_create(int sck, char* errbuf)
 {
-  pcap_addr_t *a;
-  char ip6str[128];
+    struct sockaddr_in laddr;
+    struct sockaddr_in raddr;
+    socklen_t len;
+    int ret;
+    // static pcap_t *descr[2] = {NULL,NULL};
+    pcap_t **descr;
+    struct pcap_pkthdr hdr;
+    const u_char *packet;
+    const char source[50];
+    const char dest[50];
+    const char filter[100];
+    bpf_u_int32 pNet;
+    bpf_u_int32 pMask;
 
-  /* Name */
-  printf("%s\n",d->name);
+    len = sizeof(raddr);
 
-  /* Description */
-  if (d->description)
-    printf("\tDescription: %s\n",d->description);
+    ret = getpeername(sck, (struct sockaddr*)&raddr, &len);
 
-  /* Loopback Address*/
-  printf("\tLoopback: %s\n",(d->flags & PCAP_IF_LOOPBACK)?"yes":"no");
+    if (ret == -1) {
+        if (errno == ENOTCONN)
+            // Gotta connect before trying this, or we don't have two endpoints to bind to
+            strcpy(errbuf, "Socket isn't connected");
+        else if (errno == EBADF)
+            // this integer not returned from socket(), or close() has been called on it
+            strcpy(errbuf, "Bad socket descriptor");
+        else
+            strcpy(errbuf, "Unknown error getting remote endpoint");
 
-  /* IP addresses */
-  for(a=d->addresses;a;a=a->next) {
-    printf("\tAddress Family: #%d\n",a->addr->sa_family);
-  
-    switch(a->addr->sa_family)
+        return descr;
+        }
+
+    ret = getsockname(sck, (struct sockaddr*)&laddr, &len);
+
+    if (ret == -1) {
+        // the first two errors here should have been caught above on the remote end, but just in case ...
+        if (errno == ENOTCONN)
+            // Gotta connect before trying this, or we don't have two endpoints to bind to
+            strcpy(errbuf, "Socket isn't connected");
+        else if (errno == EBADF)
+            // this integer not returned from socket(), or close() has been called on it
+            strcpy(errbuf, "Bad socket descriptor");
+        else
+            strcpy(errbuf, "Unknown error getting local endpoint");
+
+        return descr;
+        }
+
+    // to make this work on windows it may be necessary to get an interface list with pcap_findalldevs_ex()
+    // and pcap_open_live all interfaces, unless "any" is present (at which point we know it's linux)
+    // Why not check the routing table and pick the interface based on that you ask?  INBOUND packets are not
+    // bound to the rules of OUR routing table, they can come from literally anywhere.  Also, that sounds like
+    // a lot more work.
+
+    /*
+    descr[0] = pcap_open_live("any", BUFSIZ, 0, -1,errbuf);
+    descr[1] = NULL;
+    */
+
+
+    sprintf((char*)source, "src host %s and src port %d", 
+        (char*)inet_ntoa(raddr.sin_addr), 
+        ntohs(raddr.sin_port)
+        );
+
+    sprintf((char*)dest, "dst host %s and dst port %d", 
+        (char*)inet_ntoa(laddr.sin_addr), 
+        ntohs(laddr.sin_port)
+        );
+
+    // inet_ntoa returns a static buffer so we can't just do this all at once 
+    sprintf((char *)filter, "%s and %s", source, dest);
+
+
+
+
+    descr = capsck_openallinterfaces(filter, errbuf);
+
+    if (descr[0] == NULL)
     {
-      case AF_INET:
-        printf("\tAddress Family Name: AF_INET\n");
-        if (a->addr)
-          printf("\tAddress: %s\n",iptos(((struct sockaddr_in *)a->addr)->sin_addr.s_addr));
-        if (a->netmask)
-          printf("\tNetmask: %s\n",iptos(((struct sockaddr_in *)a->netmask)->sin_addr.s_addr));
-        if (a->broadaddr)
-          printf("\tBroadcast Address: %s\n",iptos(((struct sockaddr_in *)a->broadaddr)->sin_addr.s_addr));
-        if (a->dstaddr)
-          printf("\tDestination Address: %s\n",iptos(((struct sockaddr_in *)a->dstaddr)->sin_addr.s_addr));
-        break;
-
-      case AF_INET6:
-       printf("\tAddress Family Name: AF_INET6\n");
-#ifndef __MINGW32__ /* Cygnus doesn't have IPv6 */
-        if (a->addr)
-          printf("\tAddress: %s\n", ip6tos(a->addr, ip6str, sizeof(ip6str)));
-#endif
-        break;
-
-      default:
-        printf("\tAddress Family Name: Unknown\n");
-        break;
+        // strcpy(errbuf, "capsck_openallinterfaces failed");
+        return descr;
     }
-  }
-  printf("\n");
+
+
+    return descr;
 }
 
-/* From tcptraceroute, convert a numeric IP address to a string */
-#define IPTOSBUFFERS    12
-char *iptos(u_long in)
+void capsck_dispatch(pcap_t **descr)
 {
-    static char output[IPTOSBUFFERS][3*4+3+1];
-    static short which;
-    u_char *p;
+    // to make this work on windows it may be necessary to pcap_dispatch() the entire list of interfaces.
+    // See comments above next to pcap_open_live()
 
-    p = (u_char *)&in;
-    which = (which + 1 == IPTOSBUFFERS ? 0 : which + 1);
-    sprintf(output[which], "%d.%d.%d.%d", p[0], p[1], p[2], p[3]);
-    return output[which];
+    while(*descr) {
+        pcap_dispatch(*descr, -1, capsck_callback, NULL);
+        descr++;
+        }
 }
 
-#ifndef __MINGW32__ /* Cygnus doesn't have IPv6 */
-char* ip6tos(struct sockaddr *sockaddr, char *address, int addrlen)
+int main(int argc, char *argv[])
 {
-    socklen_t sockaddrlen;
 
-    #ifdef WIN32
-    sockaddrlen = sizeof(struct sockaddr_in6);
-    #else
-    sockaddrlen = sizeof(struct sockaddr_storage);
-    #endif
+#ifndef WIN32
+    int sockfd;
+#else
+    SOCKET sockfd;
+#endif
+    
+    int portno, n, ret;
+
+    char errbuf[PCAP_ERRBUF_SIZE];
+    struct sockaddr_in serv_addr;
+    struct hostent *server;
+    pcap_t **capsck;
+    struct timeval t;
+    int i = 0;
+    char buffer[256];
+ 
+    WSADATA wsaData;
+    int iResult;
+
+#ifdef WIN32
+    // Initialize Winsock
+    iResult = WSAStartup(MAKEWORD(2, 2), &wsaData);
+    if (iResult != 0) {
+        printf("WSAStartup failed: %d\n", iResult);
+        return 1;
+    }
+#endif
+ 
+    if (argc < 3) {
+       fprintf(stderr,"usage %s hostname port\n", argv[0]);
+       exit(0);
+    }
+    portno = atoi(argv[2]);
+    sockfd = socket(AF_INET, SOCK_STREAM, 0);
+    if (sockfd < 0) 
+        error("ERROR opening socket");
+
+    printf("Connecting to host %s port %d\n", argv[1], portno);
+    server = gethostbyname(argv[1]);
+    if (server == NULL) {
+        fprintf(stderr,"ERROR, no such host\n");
+        exit(0);
+    }
+    bzero((char *) &serv_addr, sizeof(serv_addr));
+    serv_addr.sin_family = AF_INET;
+    bcopy((char *)server->h_addr, 
+         (char *)&serv_addr.sin_addr.s_addr,
+         server->h_length);
+    serv_addr.sin_port = htons(portno);
+
+    if (connect(sockfd,(struct sockaddr *)&serv_addr,sizeof(serv_addr)) < 0) 
+        error("ERROR connecting");
+
+    capsck = capsck_create(sockfd, errbuf);
+
+    if (capsck[0] == NULL) {
+        fprintf(stderr, "%s\n", errbuf);
+        exit(0);
+        }
+
+    strcpy(buffer, "GET /\r\n");
+    printf("writing\n");
+    n = send(sockfd, buffer, strlen(buffer),0);
+    printf("wrote\n");
+    if (n < 0)
+        error("ERROR writing to socket");
 
 
-    if(getnameinfo(sockaddr, 
-        sockaddrlen, 
-        address, 
-        addrlen, 
-        NULL, 
-        0, 
-        NI_NUMERICHOST) != 0) address = NULL;
-
-    return address;
+    // Perhaps in a thread?
+    while (1) {
+        // n = read(sockfd, buffer, 255);
+        n = recv(sockfd, buffer, sizeof(buffer)-1, 0);
+        if (n < 0)
+            error("ERROR reading from socket");
+        if (n > 0)
+            printf("read %d octets\n", n);
+        if (n == 0) {
+            printf("Connection closed\n");
+            return(0);
+        }
+        // printf("%s\n", buffer);
+        capsck_dispatch(capsck);
+#ifdef WIN32
+        // Sleep(50);
+#else
+        t.tv_sec = 0;
+        t.tv_usec = 50000;
+        select(0,NULL,NULL,NULL, &t);
+#endif
+        i++;
+        i %= 100;
+        if (i == 0) {
+            printf("normal thing-doing loop here (last read %d)\n", n);
+            }
+        }
+        
 }
-#endif /* __MINGW32__ */
-
-
