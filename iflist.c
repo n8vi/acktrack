@@ -260,10 +260,10 @@ int main(int argc, char *argv[])
     int i = 0;
     char buffer[256];
  
-    WSADATA wsaData;
     int iResult;
 
 #ifdef WIN32
+    WSADATA wsaData;
     // Initialize Winsock
     iResult = WSAStartup(MAKEWORD(2, 2), &wsaData);
     if (iResult != 0) {
@@ -326,13 +326,15 @@ int main(int argc, char *argv[])
         }
         // printf("%s\n", buffer);
         capsck_dispatch(capsck);
+/*
 #ifdef WIN32
-        // Sleep(50);
+        Sleep(50);
 #else
         t.tv_sec = 0;
         t.tv_usec = 50000;
         select(0,NULL,NULL,NULL, &t);
 #endif
+*/
         i++;
         i %= 100;
         if (i == 0) {
