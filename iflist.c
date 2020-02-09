@@ -25,7 +25,6 @@
 #endif
 
 
-
 void error(char *msg)
 {
     perror(msg);
@@ -44,7 +43,7 @@ pcap_t **capsck_openallinterfaces(char *filter, char* errbuf)
 {
     pcap_addr_t *a;
     pcap_if_t *alldevs;
-    pcap_if_t *ipv4devs;
+    // pcap_if_t *ipv4devs;
     pcap_if_t *d;
     pcap_if_t *m = NULL;
     pcap_if_t *f = NULL;
@@ -103,8 +102,8 @@ pcap_t **capsck_openallinterfaces(char *filter, char* errbuf)
         if(descr[i] == NULL) {
             sprintf(errbuf, "pcap_open_live failed for interface %s", d->name);
             descr[0] = NULL;
-            /* ACTUALLY DEALLOCATE AND RETURN NULL HERE INSTEAD */
-            return descr;
+            /* ACTUALLY DEALLOCATE HERE */
+            return NULL;
             }
 
         /* next step happens here */
@@ -147,15 +146,10 @@ pcap_t **capsck_create(int sck, char* errbuf)
     struct sockaddr_in raddr;
     socklen_t len;
     int ret;
-    // static pcap_t *descr[2] = {NULL,NULL};
     pcap_t **descr;
-    struct pcap_pkthdr hdr;
-    const u_char *packet;
     const char source[50];
     const char dest[50];
     const char filter[100];
-    bpf_u_int32 pNet;
-    bpf_u_int32 pMask;
 
     len = sizeof(raddr);
 
@@ -171,7 +165,7 @@ pcap_t **capsck_create(int sck, char* errbuf)
         else
             strcpy(errbuf, "Unknown error getting remote endpoint");
 
-        return descr;
+        return NULL;
         }
 
     ret = getsockname(sck, (struct sockaddr*)&laddr, &len);
@@ -218,9 +212,9 @@ pcap_t **capsck_create(int sck, char* errbuf)
 
 
 
-    descr = capsck_openallinterfaces(filter, errbuf);
+    descr = capsck_openallinterfaces((char *)filter, errbuf);
 
-    if (descr[0] == NULL)
+    if (descr == NULL)
     {
         // strcpy(errbuf, "capsck_openallinterfaces failed");
         return descr;
@@ -250,13 +244,13 @@ int main(int argc, char *argv[])
     SOCKET sockfd;
 #endif
     
-    int portno, n, ret;
+    int portno, n; // , ret;
 
     char errbuf[PCAP_ERRBUF_SIZE];
     struct sockaddr_in serv_addr;
     struct hostent *server;
     pcap_t **capsck;
-    struct timeval t;
+    // struct timeval t;
     int i = 0;
     char buffer[256];
  
@@ -299,7 +293,7 @@ int main(int argc, char *argv[])
 
     capsck = capsck_create(sockfd, errbuf);
 
-    if (capsck[0] == NULL) {
+    if (capsck == NULL) {
         fprintf(stderr, "%s\n", errbuf);
         exit(0);
         }
