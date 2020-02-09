@@ -139,7 +139,6 @@ pcap_t **capsck_openallinterfaces(char *filter, char* errbuf)
 
 }
     
-
 pcap_t **capsck_create(int sck, char* errbuf)
 {
     struct sockaddr_in laddr;
@@ -150,6 +149,28 @@ pcap_t **capsck_create(int sck, char* errbuf)
     const char source[50];
     const char dest[50];
     const char filter[100];
+    char type;
+    int typelen;
+
+    ret = getsockopt(sck, SOL_SOCKET, SO_TYPE, &type, &typelen);
+
+    if (ret == -1) {
+        if (errno == ENOTCONN)
+            // Gotta connect before trying this, or we don't have two endpoints to bind to
+            strcpy(errbuf, "Socket isn't connected");
+        else if (errno == EBADF)
+            // this integer not returned from socket(), or close() has been called on it
+            strcpy(errbuf, "Bad socket descriptor");
+        else
+            strcpy(errbuf, "Unknown error getting remote endpoint");
+
+        return NULL;
+    }
+
+    if (type != SOCK_STREAM) {
+        strcpy(errbuf, "Socket is not TCP");
+        return NULL;
+    }
 
     len = sizeof(raddr);
 
@@ -167,6 +188,11 @@ pcap_t **capsck_create(int sck, char* errbuf)
 
         return NULL;
         }
+
+    if (raddr.sin_family != AF_INET) {
+        strcpy(errbuf, "Socket is not ipv4");
+        return NULL;
+    }
 
     ret = getsockname(sck, (struct sockaddr*)&laddr, &len);
 
@@ -208,9 +234,6 @@ pcap_t **capsck_create(int sck, char* errbuf)
 
     // inet_ntoa returns a static buffer so we can't just do this all at once 
     sprintf((char *)filter, "%s and %s", source, dest);
-
-
-
 
     descr = capsck_openallinterfaces((char *)filter, errbuf);
 
