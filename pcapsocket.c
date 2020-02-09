@@ -181,7 +181,7 @@ pcap_t **capsck_create(int sck, char* errbuf)
         else
             strcpy(errbuf, "Unknown error getting local endpoint");
 
-        return descr;
+        return NULL;
         }
 
     // to make this work on windows it may be necessary to get an interface list with pcap_findalldevs_ex()
