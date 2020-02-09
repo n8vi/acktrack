@@ -2,9 +2,9 @@
 <VisualStudioProject
 	ProjectType="Visual C++"
 	Version="8.00"
-	Name="iflist"
+	Name="pcapsocket"
 	ProjectGUID="{AD22E53E-6B36-4514-8F90-A92D2CFAAEBF}"
-	RootNamespace="iflist"
+	RootNamespace="pcapsocket"
 	Keyword="Win32Proj"
 	>
 	<Platforms>
@@ -342,7 +342,7 @@
 			UniqueIdentifier="{4FC737F1-C7A5-4376-A066-2A32D752A2FF}"
 			>
 			<File
-				RelativePath=".\iflist.c"
+				RelativePath=".\pcapsocket.c"
 				>
 			</File>
 		</Filter>

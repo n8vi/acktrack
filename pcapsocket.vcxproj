@@ -62,12 +62,12 @@
       <AdditionalIncludeDirectories>../;../bpf/;../lbl/;pcap/Include/;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <PreprocessorDefinitions>NDEBUG;WIN32;_CONSOLE;_MBCS;WPCAP;HAVE_REMOTE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <AssemblerListingLocation>.\Release\</AssemblerListingLocation>
-      <PrecompiledHeaderOutputFile>.\Release\iflist.pch</PrecompiledHeaderOutputFile>
+      <PrecompiledHeaderOutputFile>.\Release\pcapsocket.pch</PrecompiledHeaderOutputFile>
       <ObjectFileName>.\Release\</ObjectFileName>
       <ProgramDataBaseFileName>.\Release\</ProgramDataBaseFileName>
     </ClCompile>
     <Midl>
-      <TypeLibraryName>.\Release\iflist.tlb</TypeLibraryName>
+      <TypeLibraryName>.\Release\pcapsocket.tlb</TypeLibraryName>
     </Midl>
     <ResourceCompile>
       <Culture>0x0410</Culture>
@@ -75,12 +75,12 @@
     </ResourceCompile>
     <Bscmake>
       <SuppressStartupBanner>true</SuppressStartupBanner>
-      <OutputFile>.\Release\iflist.bsc</OutputFile>
+      <OutputFile>.\Release\pcapsocket.bsc</OutputFile>
     </Bscmake>
     <Link>
       <SuppressStartupBanner>true</SuppressStartupBanner>
       <SubSystem>Console</SubSystem>
-      <OutputFile>.\Release\iflist.exe</OutputFile>
+      <OutputFile>.\Release\pcapsocket.exe</OutputFile>
       <AdditionalDependencies>odbc32.lib;odbccp32.lib;wsock32.lib;ws2_32.lib;Iphlpapi.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
   </ItemDefinitionGroup>
@@ -96,13 +96,13 @@
       <AdditionalIncludeDirectories>../;../bpf/;../lbl/;pcap/Include/;D:/Program Files/Microsoft Platform SDK/include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <PreprocessorDefinitions>_DEBUG;WIN32;_CONSOLE;_MBCS;WPCAP;HAVE_REMOTE;_CRT_SECURE_NO_WARNINGS;_WINSOCK_DEPRECATED_NO_WARNINGS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <AssemblerListingLocation>.\Debug\</AssemblerListingLocation>
-      <PrecompiledHeaderOutputFile>.\Debug\iflist.pch</PrecompiledHeaderOutputFile>
+      <PrecompiledHeaderOutputFile>.\Debug\pcapsocket.pch</PrecompiledHeaderOutputFile>
       <ObjectFileName>.\Debug\</ObjectFileName>
       <ProgramDataBaseFileName>.\Debug\</ProgramDataBaseFileName>
       <BasicRuntimeChecks>EnableFastChecks</BasicRuntimeChecks>
     </ClCompile>
     <Midl>
-      <TypeLibraryName>.\Debug\iflist.tlb</TypeLibraryName>
+      <TypeLibraryName>.\Debug\pcapsocket.tlb</TypeLibraryName>
     </Midl>
     <ResourceCompile>
       <Culture>0x0410</Culture>
@@ -110,18 +110,18 @@
     </ResourceCompile>
     <Bscmake>
       <SuppressStartupBanner>true</SuppressStartupBanner>
-      <OutputFile>.\Debug\iflist.bsc</OutputFile>
+      <OutputFile>.\Debug\pcapsocket.bsc</OutputFile>
     </Bscmake>
     <Link>
       <SuppressStartupBanner>true</SuppressStartupBanner>
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <SubSystem>Console</SubSystem>
-      <OutputFile>.\Debug\iflist.exe</OutputFile>
+      <OutputFile>.\Debug\pcapsocket.exe</OutputFile>
       <AdditionalDependencies>odbc32.lib;odbccp32.lib;wsock32.lib;ws2_32.lib;Iphlpapi.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <ClCompile Include="iflist.c">
+    <ClCompile Include="pcapsocket.c">
       <FunctionLevelLinking Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">true</FunctionLevelLinking>
     </ClCompile>
   </ItemGroup>
