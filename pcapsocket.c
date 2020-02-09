@@ -36,6 +36,9 @@ void capsck_callback(u_char *useless,const struct pcap_pkthdr* pkthdr,const u_ch
 {
   static int count = 1;
 
+  //TODO: parse packet, figure out ACK number
+  // Per rfc793, that should be the 32 bits starting at bit 64; that is to say the third uint_32 (htonl(), etc)
+
   printf("\nPacket number [%d], length of this packet is: %d\n", count++, pkthdr->len);
 }
 
