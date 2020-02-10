@@ -43,6 +43,9 @@ void capsck_callback(u_char *useless,const struct pcap_pkthdr* pkthdr,const u_ch
 }
 
 pcap_t **capsck_openallinterfaces(char *filter, char* errbuf)
+//TODO: clean up memory allocations in this function
+//cleanup after this function does not require anything special because I did an array/pointer instead of a linked list
+// You can just free() it
 {
     pcap_addr_t *a;
     pcap_if_t *alldevs;
@@ -86,13 +89,6 @@ pcap_t **capsck_openallinterfaces(char *filter, char* errbuf)
         c++;
 
         printf("  %s has ipv4.  Copied to %s\n", d->name, m->name);
-/*       
-        printf("%d. %s\n", ++i, d->name);
-        if (d->description)
-            printf(" (%s)\n", d->description);
-        else
-            printf("no descr\n");
-*/
         }
 
     descr = malloc(sizeof(pcap_t *) * (c+1));
