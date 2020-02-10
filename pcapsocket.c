@@ -148,8 +148,8 @@ pcap_t **capsck_create(int sck, char* errbuf)
     const char source[50];
     const char dest[50];
     const char filter[100];
-    char type;
-    int typelen;
+    int type;
+    int typelen = sizeof(type);
 
     ret = getsockopt(sck, SOL_SOCKET, SO_TYPE, &type, &typelen);
 
@@ -161,7 +161,7 @@ pcap_t **capsck_create(int sck, char* errbuf)
             // this integer not returned from socket(), or close() has been called on it
             strcpy(errbuf, "Bad socket descriptor");
         else
-            strcpy(errbuf, "Unknown error getting remote endpoint");
+            strcpy(errbuf, "Unknown error getting socket type");
 
         return NULL;
     }
