@@ -42,6 +42,21 @@ void capsck_callback(u_char *useless,const struct pcap_pkthdr* pkthdr,const u_ch
   printf("\nPacket number [%d], length of this packet is: %d\n", count++, pkthdr->len);
 }
 
+void capsck_freeip4devs(pcap_if_t* f)
+{
+    pcap_if_t *n;
+    // pcap_freealldevs(f);
+
+    printf("freeip4devs\n");
+
+    while (f) {
+        n = f->next;
+        printf("deallocating %s %p, next is %p\n", f->name, f, n);
+        free(f);
+        f = n;
+    }
+}
+
 pcap_t **capsck_openallinterfaces(char *filter, char* errbuf)
 //TODO: clean up memory allocations in this function
 //cleanup after this function does not require anything special because I did an array/pointer instead of a linked list
@@ -65,14 +80,12 @@ pcap_t **capsck_openallinterfaces(char *filter, char* errbuf)
         return NULL;
 
     for (d=alldevs; d != NULL; d = d->next) {
-        // printf("%s ...\n", d->name);
         has_ipv4_addr = 0;
         for(a=d->addresses; a; a=a->next) {
             if (a->addr->sa_family == AF_INET)
                 has_ipv4_addr = 1;
             }
         if (! has_ipv4_addr) {
-            // printf("  %s has no ipv4\n", d->name);
             continue;
             }
 
@@ -91,48 +104,46 @@ pcap_t **capsck_openallinterfaces(char *filter, char* errbuf)
         printf("  %s has ipv4.  Copied to %s\n", d->name, m->name);
         }
 
+
     descr = malloc(sizeof(pcap_t *) * (c+1));
     i = 0;
 
     for (d=f; d!= NULL; d = d->next) {
-        printf("pcap_open_live(%s)\n", d->name);
         descr[i] = pcap_open_live(d->name, BUFSIZ, 0, -1,errbuf);
 
         if(descr[i] == NULL) {
             sprintf(errbuf, "pcap_open_live failed for interface %s", d->name);
-            descr[0] = NULL;
-            /* ACTUALLY DEALLOCATE HERE */
+            capsck_freeip4devs(f);
+            free(descr);
             return NULL;
             }
 
-        /* next step happens here */
-        /* need to either pass filter string in here, or combine both functions */
     // compile the filter string we built above into a BPF binary.  The string, by the way, can be tested with
     // tshark or wireshark
     // printf("PCAP filter: %s\n", filter)
         if (pcap_compile(descr[i], &fp, filter, 0, PCAP_NETMASK_UNKNOWN) == -1) {
             strcpy(errbuf, "pcap_compile failed");
+            capsck_freeip4devs(f);
+            free(descr);
             return NULL;
         }
 
         // Load the compiled filter into the kernel
         if (pcap_setfilter(descr[i], &fp) == -1) {
             strcpy(errbuf, "pcap_setfilter failed");
+            capsck_freeip4devs(f);
+            free(descr);
             return NULL;
         }
 
         i++;
         }
 
+
     descr[i] = NULL;
 
-
-    /* [x] 1) count interfaces and place into another linked list */
-    /* [x] 2) allocate enough memory for array based on count */
-    /* [x] 3) unwind linked list into array of newly opened pcap handles */
-    /* [ ] 4) properly deallocate all linked lists!  */
-
     pcap_freealldevs(alldevs);
+    capsck_freeip4devs(f);
 
     return(descr);
 
@@ -321,9 +332,7 @@ int main(int argc, char *argv[])
         }
 
     strcpy(buffer, "GET /\r\n");
-    printf("writing\n");
     n = send(sockfd, buffer, strlen(buffer),0);
-    printf("wrote\n");
     if (n < 0)
         error("ERROR writing to socket");
 
