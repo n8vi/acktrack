@@ -24,6 +24,36 @@
 #define SOCKET_ERROR (-1)
 #endif
 
+/* 4 bytes IP address */
+typedef struct ip_address{
+    u_char byte1;
+    u_char byte2;
+    u_char byte3;
+    u_char byte4;
+}ip_address;
+
+/* IPv4 header */
+typedef struct ip_header{
+    u_char  ver_ihl;        // Version (4 bits) + Internet header length (4 bits)
+    u_char  tos;            // Type of service 
+    u_short tlen;           // Total length 
+    u_short identification; // Identification
+    u_short flags_fo;       // Flags (3 bits) + Fragment offset (13 bits)
+    u_char  ttl;            // Time to live
+    u_char  proto;          // Protocol
+    u_short crc;            // Header checksum
+    ip_address  saddr;      // Source address
+    ip_address  daddr;      // Destination address
+    u_int   op_pad;         // Option + Padding
+}ip_header;
+
+typedef struct tcp_header{
+    u_int dontcare1;
+    u_int seq_number;
+    u_int ack_number;
+    u_int offset_reserved_flags_window;
+}tcp_header;
+
 
 void error(char *msg)
 {
@@ -35,11 +65,37 @@ void capsck_callback(u_char *useless,const struct pcap_pkthdr* pkthdr,const u_ch
         packet)
 {
   static int count = 1;
+  static u_int origseq = 0;
+  static u_int origack = 0;
+  static u_int origpkt = 0;
+  int seqno;
+  int ackno;
+  u_int ip_len;
+
+  ip_header *ih;
+  tcp_header *th;
+  
 
   //TODO: parse packet, figure out ACK number
   // Per rfc793, that should be the 32 bits starting at bit 64; that is to say the third uint_32 (htonl(), etc)
 
-  printf("\nPacket number [%d], length of this packet is: %d\n", count++, pkthdr->len);
+  ih = (ip_header *) (packet + 14);
+  ip_len = (ih->ver_ihl & 0xf) * 4;
+  th = (tcp_header *) ((u_char*)ih + ip_len);
+
+  seqno = htonl(th->seq_number);
+  ackno = htonl(th->ack_number);
+
+  if (!origpkt) {
+    origseq = seqno;
+    origack = ackno;
+    origpkt = 1;
+    }
+
+  seqno -= origseq;
+  ackno -= origack;
+
+  printf("\nPacket number [%d], length of this packet is: %d, seq number: %d ack number: %d\n", count++, pkthdr->len, seqno, ackno);
 }
 
 void capsck_freeip4devs(pcap_if_t* f)
@@ -325,6 +381,9 @@ int main(int argc, char *argv[])
         error("ERROR connecting");
 
     capsck = capsck_create(sockfd, errbuf);
+
+    printf("connected ... \n");
+    sleep (5);
 
     if (capsck == NULL) {
         fprintf(stderr, "%s\n", errbuf);
