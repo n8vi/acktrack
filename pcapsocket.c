@@ -18,6 +18,7 @@
 #define bzero(b,len) (memset((b), '\0', (len)), (void) 0)
 #define bcopy(b1,b2,len) (memmove((b2), (b1), (len)), (void) 0)
 #define PCAP_NETMASK_UNKNOWN 0xffffffff
+#define sleep(x) Sleep((x*1000))
 #endif
 
 #ifndef SOCKET_ERROR
@@ -252,7 +253,7 @@ pcap_t **capsck_create(int sck, char* errbuf)
 \**************************************************************************************************************************************************************************************************************/
 
 
-    ret = getsockopt(sck, SOL_SOCKET, SO_TYPE, &type, &typelen);
+    ret = getsockopt(sck, SOL_SOCKET, SO_TYPE, (void*)&type, &typelen);
 
     if (ret == -1) {
         if (errno == ENOTCONN)
