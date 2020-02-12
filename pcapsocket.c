@@ -403,7 +403,7 @@ int main(int argc, char *argv[])
     capsck = capsck_create(sockfd, errbuf);
 
     printf("connected ... \n");
-    sleep (5);
+    // sleep (5);
 
     if (capsck == NULL) {
         fprintf(stderr, "%s\n", errbuf);
