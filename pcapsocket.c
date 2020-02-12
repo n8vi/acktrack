@@ -55,6 +55,16 @@ typedef struct tcp_header{
     u_int offset_reserved_flags_window;
 }tcp_header;
 
+typedef struct sock_conn_data{
+    struct in_addr laddr;
+    struct in_addr raddr;
+    u_short lport;
+    u_short rport;
+    int lseqorig;
+    int rseqorig;
+    u_int gotorigpkt;
+    struct timeval origtime;
+}sock_conn_data;
 
 void error(char *msg)
 {
@@ -66,12 +76,12 @@ void capsck_callback(u_char *useless,const struct pcap_pkthdr* pkthdr,const u_ch
         packet)
 {
   static int count = 1;
-  static u_int origseq = 0; /* bad, bad, bad.  Should be associated with handle */
-  static u_int origack = 0;
-  static u_int origpkt = 0;
-  int seqno;
-  int ackno;
+  static sock_conn_data scd;
   u_int ip_len;
+  u_int seqno;
+  u_int ackno;
+  u_short sport;
+  u_short dport;
   char s_src[16];
   char s_dst[16];
 
@@ -82,25 +92,36 @@ void capsck_callback(u_char *useless,const struct pcap_pkthdr* pkthdr,const u_ch
   ip_len = (ih->ver_ihl & 0xf) * 4;
   th = (tcp_header *) ((u_char*)ih + ip_len);
 
+  sport = htons(th->sport);
+  dport = htons(th->dport);
+
   seqno = htonl(th->seq_number);
   ackno = htonl(th->ack_number);
 
-/*
-  if (!origpkt) {
-    origseq = seqno;
-    origack = ackno;
-    origpkt = 1;
-    }
+  if (!scd.gotorigpkt) {
+    memcpy(&scd.laddr, &ih->saddr, sizeof(struct in_addr));
+    memcpy(&scd.raddr, &ih->daddr, sizeof(struct in_addr));
+    scd.lport = sport;
+    scd.rport = dport;
+    scd.lseqorig = seqno - 1;
+    scd.rseqorig = ackno - 1;
+    memcpy(&scd.origtime, &pkthdr->ts, sizeof(struct timeval));
+    scd.gotorigpkt = 1;
+    } 
 
-  seqno -= origseq;
-  ackno -= origack;
-*/
+  if (!memcmp(&scd.laddr, &ih->saddr, sizeof(struct in_addr)) && sport == scd.lport) {
+      seqno -= scd.lseqorig;
+      ackno -= scd.rseqorig;
+  } else {
+      seqno -= scd.rseqorig;
+      ackno -= scd.lseqorig;
+  }
 
   /* blasted static buffers! */
   strcpy(s_src, inet_ntoa(ih->saddr));
   strcpy(s_dst, inet_ntoa(ih->daddr));
 
-  printf("%lu.%.6lu: %15s:%.5d -> %15s:%.5d LEN %.5d SEQ %.8x ACK %.8x\n", pkthdr->ts.tv_sec, pkthdr->ts.tv_usec, s_src, htons(th->sport), s_dst, htons(th->dport), pkthdr->len, seqno, ackno);
+  printf("%lu.%.6lu: %15s:%.5d -> %15s:%.5d LEN %.5d SEQ %.8d ACK %.8d\n", pkthdr->ts.tv_sec, pkthdr->ts.tv_usec, s_src, htons(th->sport), s_dst, htons(th->dport), pkthdr->len, seqno, ackno);
 
   // printf("\nPacket number [%d], length of this packet is: %d, seq number: %d ack number: %d\n", count++, pkthdr->len, seqno, ackno);
 }
@@ -434,6 +455,11 @@ int main(int argc, char *argv[])
             }
         if (n == 0) {
             printf("Connection closed\n");
+            capsck_dispatch(capsck);
+            sleep(10);
+            printf("final despool\n");
+            capsck_dispatch(capsck);
+            printf("I'm out\n");
             return(0);
         }
         // printf("%s\n", buffer);
