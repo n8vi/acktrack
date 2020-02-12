@@ -72,6 +72,8 @@ void capsck_callback(u_char *useless,const struct pcap_pkthdr* pkthdr,const u_ch
   int seqno;
   int ackno;
   u_int ip_len;
+  char s_src[16];
+  char s_dst[16];
 
   ip_header *ih;
   tcp_header *th;
@@ -94,7 +96,11 @@ void capsck_callback(u_char *useless,const struct pcap_pkthdr* pkthdr,const u_ch
   ackno -= origack;
 */
 
-  printf("%lu.%.6lu: %15s:%.5d -> %15s:%.5d LEN %.5d SEQ %.8x ACK %.8x\n", pkthdr->ts.tv_sec, pkthdr->ts.tv_usec, inet_ntoa(ih->saddr), htons(th->sport), inet_ntoa(ih->daddr), htons(th->dport), pkthdr->len, seqno, ackno);
+  /* blasted static buffers! */
+  strcpy(s_src, inet_ntoa(ih->saddr));
+  strcpy(s_dst, inet_ntoa(ih->daddr));
+
+  printf("%lu.%.6lu: %15s:%.5d -> %15s:%.5d LEN %.5d SEQ %.8x ACK %.8x\n", pkthdr->ts.tv_sec, pkthdr->ts.tv_usec, s_src, htons(th->sport), s_dst, htons(th->dport), pkthdr->len, seqno, ackno);
 
   // printf("\nPacket number [%d], length of this packet is: %d, seq number: %d ack number: %d\n", count++, pkthdr->len, seqno, ackno);
 }
