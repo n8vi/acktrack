@@ -42,13 +42,14 @@ typedef struct ip_header{
     u_char  ttl;            // Time to live
     u_char  proto;          // Protocol
     u_short crc;            // Header checksum
-    ip_address  saddr;      // Source address
-    ip_address  daddr;      // Destination address
+    struct in_addr saddr;      // Source address
+    struct in_addr daddr;      // Destination address
     u_int   op_pad;         // Option + Padding
 }ip_header;
 
 typedef struct tcp_header{
-    u_int dontcare1;
+    u_short sport;
+    u_short dport;
     u_int seq_number;
     u_int ack_number;
     u_int offset_reserved_flags_window;
@@ -93,7 +94,7 @@ void capsck_callback(u_char *useless,const struct pcap_pkthdr* pkthdr,const u_ch
   ackno -= origack;
 */
 
-  printf("%lu.%.6lu: LEN %d SEQ %x ACK %x\n", pkthdr->ts.tv_sec, pkthdr->ts.tv_usec, pkthdr->len, seqno, ackno);
+  printf("%lu.%.6lu: %15s:%.5d -> %15s:%.5d LEN %.5d SEQ %.8x ACK %.8x\n", pkthdr->ts.tv_sec, pkthdr->ts.tv_usec, inet_ntoa(ih->saddr), htons(th->sport), inet_ntoa(ih->daddr), htons(th->dport), pkthdr->len, seqno, ackno);
 
   // printf("\nPacket number [%d], length of this packet is: %d, seq number: %d ack number: %d\n", count++, pkthdr->len, seqno, ackno);
 }
