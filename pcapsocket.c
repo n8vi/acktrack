@@ -65,7 +65,7 @@ void capsck_callback(u_char *useless,const struct pcap_pkthdr* pkthdr,const u_ch
         packet)
 {
   static int count = 1;
-  static u_int origseq = 0;
+  static u_int origseq = 0; /* bad, bad, bad.  Should be associated with handle */
   static u_int origack = 0;
   static u_int origpkt = 0;
   int seqno;
@@ -75,10 +75,6 @@ void capsck_callback(u_char *useless,const struct pcap_pkthdr* pkthdr,const u_ch
   ip_header *ih;
   tcp_header *th;
   
-
-  //TODO: parse packet, figure out ACK number
-  // Per rfc793, that should be the 32 bits starting at bit 64; that is to say the third uint_32 (htonl(), etc)
-
   ih = (ip_header *) (packet + 14);
   ip_len = (ih->ver_ihl & 0xf) * 4;
   th = (tcp_header *) ((u_char*)ih + ip_len);
@@ -86,6 +82,7 @@ void capsck_callback(u_char *useless,const struct pcap_pkthdr* pkthdr,const u_ch
   seqno = htonl(th->seq_number);
   ackno = htonl(th->ack_number);
 
+/*
   if (!origpkt) {
     origseq = seqno;
     origack = ackno;
@@ -94,20 +91,19 @@ void capsck_callback(u_char *useless,const struct pcap_pkthdr* pkthdr,const u_ch
 
   seqno -= origseq;
   ackno -= origack;
+*/
 
-  printf("\nPacket number [%d], length of this packet is: %d, seq number: %d ack number: %d\n", count++, pkthdr->len, seqno, ackno);
+  printf("%lu.%.6lu: LEN %d SEQ %x ACK %x\n", pkthdr->ts.tv_sec, pkthdr->ts.tv_usec, pkthdr->len, seqno, ackno);
+
+  // printf("\nPacket number [%d], length of this packet is: %d, seq number: %d ack number: %d\n", count++, pkthdr->len, seqno, ackno);
 }
 
 void capsck_freeip4devs(pcap_if_t* f)
 {
     pcap_if_t *n;
-    // pcap_freealldevs(f);
-
-    printf("freeip4devs\n");
 
     while (f) {
         n = f->next;
-        printf("deallocating %s %p, next is %p\n", f->name, f, n);
         free(f);
         f = n;
     }
@@ -145,7 +141,7 @@ pcap_t **capsck_openallinterfaces(char *filter, char* errbuf)
             continue;
             }
 
-        printf("  %s has ipv4.  Copying to new list ...\n", d->name);
+        printf("  Interface %s has ipv4.  Adding to list of interfaces to capture on.\n", d->name);
 
         p = m;
         m = malloc(sizeof(pcap_if_t));
@@ -157,7 +153,6 @@ pcap_t **capsck_openallinterfaces(char *filter, char* errbuf)
             f = m;
         c++;
 
-        printf("  %s has ipv4.  Copied to %s\n", d->name, m->name);
         }
 
 
@@ -176,7 +171,6 @@ pcap_t **capsck_openallinterfaces(char *filter, char* errbuf)
 
     // compile the filter string we built above into a BPF binary.  The string, by the way, can be tested with
     // tshark or wireshark
-    // printf("PCAP filter: %s\n", filter)
         if (pcap_compile(descr[i], &fp, filter, 0, PCAP_NETMASK_UNKNOWN) == -1) {
             strcpy(errbuf, "pcap_compile failed");
             capsck_freeip4devs(f);
@@ -212,11 +206,23 @@ pcap_t **capsck_create(int sck, char* errbuf)
     socklen_t len;
     int ret;
     pcap_t **descr;
-    const char source[50];
-    const char dest[50];
-    const char filter[100];
+    const char lsource[50];
+    const char ldest[50];
+    const char rsource[50];
+    const char rdest[50];
     int type;
     int typelen = sizeof(type);
+    const char filter[201];
+
+/**************************************************************************************[ maximum possible filter size ]****************************************************************************************\
+                                                                                                       1         1         1         1         1         1         1         1         1         1         2
+             1         2         3         4         5         6         7         8         9         0         1         2         3         4         5         6         7         8         9         0
+    123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901
+    tcp and ((src host xxx.xxx.xxx.xxx and src port xxxxx and dst host xxx.xxx.xxx.xxx and dst port xxxxx) or (dst host xxx.xxx.xxx.xxx and dst port xxxxx and src host xxx.xxx.xxx.xxx and src port xxxxx))$
+                                                                                                                                                                                                      _____/
+                                                                                                                                                                                     (null terminator)
+\**************************************************************************************************************************************************************************************************************/
+
 
     ret = getsockopt(sck, SOL_SOCKET, SO_TYPE, &type, &typelen);
 
@@ -288,18 +294,30 @@ pcap_t **capsck_create(int sck, char* errbuf)
     */
 
 
-    sprintf((char*)source, "src host %s and src port %d", 
+    // inet_ntoa returns a static buffer so we can't just do this all at once 
+    sprintf((char*)rsource, "src host %s and src port %d", 
         (char*)inet_ntoa(raddr.sin_addr), 
         ntohs(raddr.sin_port)
         );
 
-    sprintf((char*)dest, "dst host %s and dst port %d", 
+    sprintf((char*)ldest, "dst host %s and dst port %d", 
         (char*)inet_ntoa(laddr.sin_addr), 
         ntohs(laddr.sin_port)
         );
 
-    // inet_ntoa returns a static buffer so we can't just do this all at once 
-    sprintf((char *)filter, "%s and %s", source, dest);
+    sprintf((char*)lsource, "src host %s and src port %d", 
+        (char*)inet_ntoa(laddr.sin_addr), 
+        ntohs(laddr.sin_port)
+        );
+
+    sprintf((char*)rdest, "dst host %s and dst port %d", 
+        (char*)inet_ntoa(raddr.sin_addr), 
+        ntohs(raddr.sin_port)
+        );
+
+    sprintf((char *)filter, "tcp and ((%s and %s) or (%s and %s))", lsource, rdest, rsource, ldest);
+
+    printf("PCAP filter = %s\n", filter);
 
     descr = capsck_openallinterfaces((char *)filter, errbuf);
 
@@ -354,6 +372,8 @@ int main(int argc, char *argv[])
         return 1;
     }
 #endif
+
+    printf("\n\n");
  
     if (argc < 3) {
        fprintf(stderr,"usage %s hostname port\n", argv[0]);
@@ -402,8 +422,9 @@ int main(int argc, char *argv[])
         n = recv(sockfd, buffer, sizeof(buffer)-1, 0);
         if (n < 0)
             error("ERROR reading from socket");
-        if (n > 0)
-            printf("read %d octets\n", n);
+        if (n > 0) {
+            // printf("read %d octets\n", n);
+            }
         if (n == 0) {
             printf("Connection closed\n");
             return(0);
@@ -421,9 +442,7 @@ int main(int argc, char *argv[])
 */
         i++;
         i %= 100;
-        if (i == 0) {
-            printf("normal thing-doing loop here (last read %d)\n", n);
-            }
+        // if (i == 0) printf("normal thing-doing loop here (last read %d)\n", n);
         }
         
 }
