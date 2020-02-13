@@ -56,6 +56,13 @@ typedef struct tcp_header{
     u_int offset_reserved_flags_window;
 }tcp_header;
 
+#define FINFLAG (1<<16)
+#define SYNFLAG (1<<17)
+#define RSTFLAG (1<<18)
+#define PSHFLAG (1<<19)
+#define ACKFLAG (1<<20)
+#define URGFLAG (1<<21)
+
 typedef struct sock_conn_data{
     struct in_addr laddr;
     struct in_addr raddr;
@@ -71,6 +78,51 @@ void error(char *msg)
 {
     perror(msg);
     exit(0);
+}
+
+char* capsck_flagstr(u_int flags)
+{
+    static char ret[7] = "------";
+
+    // ret[6] = '\0';
+
+    if (flags & FINFLAG) {
+        ret[5] = 'F';
+    }
+    else {
+        ret[5] = '-';
+    }
+    if (flags & SYNFLAG) {
+        ret[4] = 'S';
+    }
+    else {
+        ret[4] = '-';
+    }
+    if (flags & RSTFLAG) {
+        ret[3] = 'R';
+    }
+    else {
+        ret[3] = '-';
+    }
+    if (flags & PSHFLAG) {
+        ret[2] = 'P';
+    }
+    else {
+        ret[2] = '-';
+    }
+    if (flags & ACKFLAG) {
+        ret[1] = 'A';
+    }
+    else {
+        ret[1] = '-';
+    }
+    if (flags & URGFLAG) {
+        ret[0] = 'U';
+    }
+    else {
+        ret[0] = '-';
+    }
+    return ret;
 }
 
 void capsck_callback(u_char *useless,const struct pcap_pkthdr* pkthdr,const u_char*
@@ -122,7 +174,7 @@ void capsck_callback(u_char *useless,const struct pcap_pkthdr* pkthdr,const u_ch
   strcpy(s_src, inet_ntoa(ih->saddr));
   strcpy(s_dst, inet_ntoa(ih->daddr));
 
-  printf("%lu.%.6lu: %15s:%.5d -> %15s:%.5d LEN %.5d SEQ %.8d ACK %.8d\n", pkthdr->ts.tv_sec, pkthdr->ts.tv_usec, s_src, htons(th->sport), s_dst, htons(th->dport), pkthdr->len, seqno, ackno);
+  printf("%lu.%.6lu: %15s:%.5d -> %15s:%.5d LEN %.5d SEQ %.8d ACK %.8d [%s]\n", pkthdr->ts.tv_sec, pkthdr->ts.tv_usec, s_src, htons(th->sport), s_dst, htons(th->dport), pkthdr->len, seqno, ackno, capsck_flagstr(htonl(th->offset_reserved_flags_window)));
 
   // printf("\nPacket number [%d], length of this packet is: %d, seq number: %d ack number: %d\n", count++, pkthdr->len, seqno, ackno);
 }
@@ -457,7 +509,12 @@ int main(int argc, char *argv[])
         if (n == 0) {
             printf("Connection closed\n");
             capsck_dispatch(capsck);
-            sleep(10);
+#ifdef WIN32
+            closesocket(sockfd);
+#else
+            close(sockfd);
+#endif
+            sleep(1);
             printf("final despool\n");
             capsck_dispatch(capsck);
             printf("I'm out\n");
