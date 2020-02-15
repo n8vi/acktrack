@@ -77,6 +77,12 @@ typedef struct capsck_t{
     int rseqorig;
     u_int gotorigpkt;
     struct timeval origtime;
+    int gotrfin;
+    int rfinseq;
+    int gotlfin;
+    int lfinseq;
+    int gotlfinack;
+    int gotrfinack;
     pcap_t **caps;
 }capsck_t;
 
@@ -91,6 +97,7 @@ char* capsck_flagstr(u_int flags)
     static char ret[7] = "------";
 
     // ret[6] = '\0';
+
 
     if (flags & FINFLAG) {
         ret[5] = 'F';
@@ -137,6 +144,12 @@ void capsck_free(capsck_t *capsck)
     free(capsck);
 }
 
+int capsck_isfinished(capsck_t *capsck)
+{
+    int ret = capsck->gotlfinack && capsck->gotrfinack;
+    return ret;
+}
+
 void capsck_callback(u_char *user,const struct pcap_pkthdr* pkthdr,const u_char*
         packet)
 {
@@ -149,6 +162,7 @@ void capsck_callback(u_char *user,const struct pcap_pkthdr* pkthdr,const u_char*
   u_short dport;
   char s_src[16];
   char s_dst[16];
+  int islpkt = 0;
 
   ip_header *ih;
   tcp_header *th;
@@ -172,15 +186,35 @@ void capsck_callback(u_char *user,const struct pcap_pkthdr* pkthdr,const u_char*
     scd->rseqorig = ackno - 1;
     memcpy(&scd->origtime, &pkthdr->ts, sizeof(struct timeval));
     scd->gotorigpkt = 1;
+    islpkt = 1;
     } 
 
   if (!memcmp(&scd->laddr, &ih->saddr, sizeof(struct in_addr)) && sport == scd->lport) {
       seqno -= scd->lseqorig;
       ackno -= scd->rseqorig;
+      islpkt = 1;
   } else {
       seqno -= scd->rseqorig;
       ackno -= scd->lseqorig;
   }
+
+  if (islpkt && scd->gotrfin) {
+      scd->gotrfinack = 1;
+  }
+
+  if (!islpkt && scd->gotlfin) {
+      scd->gotlfinack = 1;
+  }
+
+  if (htonl(th->offset_reserved_flags_window) & FINFLAG) {
+      if (islpkt) {
+          scd->gotlfin = 1;
+      }
+      else {
+          scd->gotrfin = 1;
+      }
+  }
+   
 
   /* blasted static buffers! */
   strcpy(s_src, inet_ntoa(ih->saddr));
@@ -289,6 +323,7 @@ capsck_t *capsck_openallinterfaces(char *filter, char* errbuf)
     capsck_freeip4devs(f);
 
     ret = malloc(sizeof(capsck_t));
+    bzero(ret, sizeof(capsck_t));
     ret->caps = descr;
 
     return(ret);
@@ -534,10 +569,8 @@ int main(int argc, char *argv[])
 #else
             close(sockfd);
 #endif
-            sleep(1);
-            printf("final despool\n");
-            capsck_dispatch(capsck);
-            printf("I'm out\n");
+            while (!capsck_isfinished(capsck))
+                capsck_dispatch(capsck);
             return(0);
         }
         // printf("%s\n", buffer);
