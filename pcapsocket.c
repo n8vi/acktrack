@@ -181,7 +181,7 @@ void capsck_callback(u_char *user,const struct pcap_pkthdr* pkthdr,const u_char*
   strcpy(s_src, inet_ntoa(ih->saddr));
   strcpy(s_dst, inet_ntoa(ih->daddr));
 
-  printf("%p: %lu.%.6lu: %15s:%.5d -> %15s:%.5d LEN %.5d SEQ %.8d ACK %.8d [%s]\n", user, pkthdr->ts.tv_sec, pkthdr->ts.tv_usec, s_src, htons(th->sport), s_dst, htons(th->dport), pkthdr->len, seqno, ackno, capsck_flagstr(htonl(th->offset_reserved_flags_window)));
+  printf("%lu.%.6lu: %15s:%.5d -> %15s:%.5d LEN %.5d SEQ %.8d ACK %.8d [%s]\n", pkthdr->ts.tv_sec, pkthdr->ts.tv_usec, s_src, htons(th->sport), s_dst, htons(th->dport), pkthdr->len, seqno, ackno, capsck_flagstr(htonl(th->offset_reserved_flags_window)));
 
 }
 
