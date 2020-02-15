@@ -63,7 +63,7 @@ typedef struct tcp_header{
 #define ACKFLAG (1<<20)
 #define URGFLAG (1<<21)
 
-typedef struct sock_conn_data{
+typedef struct capsck_t{
     struct in_addr laddr;
     struct in_addr raddr;
     u_short lport;
@@ -72,7 +72,8 @@ typedef struct sock_conn_data{
     int rseqorig;
     u_int gotorigpkt;
     struct timeval origtime;
-}sock_conn_data;
+    pcap_t **caps;
+}capsck_t;
 
 void error(char *msg)
 {
@@ -125,11 +126,17 @@ char* capsck_flagstr(u_int flags)
     return ret;
 }
 
+void capsck_free(capsck_t *capsck)
+{
+    free(capsck->caps);
+    free(capsck);
+}
+
 void capsck_callback(u_char *user,const struct pcap_pkthdr* pkthdr,const u_char*
         packet)
 {
   static int count = 1;
-  static sock_conn_data scd;
+  capsck_t *scd = (capsck_t *)user;
   u_int ip_len;
   u_int seqno;
   u_int ackno;
@@ -151,23 +158,23 @@ void capsck_callback(u_char *user,const struct pcap_pkthdr* pkthdr,const u_char*
   seqno = htonl(th->seq_number);
   ackno = htonl(th->ack_number);
 
-  if (!scd.gotorigpkt) {
-    memcpy(&scd.laddr, &ih->saddr, sizeof(struct in_addr));
-    memcpy(&scd.raddr, &ih->daddr, sizeof(struct in_addr));
-    scd.lport = sport;
-    scd.rport = dport;
-    scd.lseqorig = seqno - 1;
-    scd.rseqorig = ackno - 1;
-    memcpy(&scd.origtime, &pkthdr->ts, sizeof(struct timeval));
-    scd.gotorigpkt = 1;
+  if (!scd->gotorigpkt) {
+    memcpy(&scd->laddr, &ih->saddr, sizeof(struct in_addr));
+    memcpy(&scd->raddr, &ih->daddr, sizeof(struct in_addr));
+    scd->lport = sport;
+    scd->rport = dport;
+    scd->lseqorig = seqno - 1;
+    scd->rseqorig = ackno - 1;
+    memcpy(&scd->origtime, &pkthdr->ts, sizeof(struct timeval));
+    scd->gotorigpkt = 1;
     } 
 
-  if (!memcmp(&scd.laddr, &ih->saddr, sizeof(struct in_addr)) && sport == scd.lport) {
-      seqno -= scd.lseqorig;
-      ackno -= scd.rseqorig;
+  if (!memcmp(&scd->laddr, &ih->saddr, sizeof(struct in_addr)) && sport == scd->lport) {
+      seqno -= scd->lseqorig;
+      ackno -= scd->rseqorig;
   } else {
-      seqno -= scd.rseqorig;
-      ackno -= scd.lseqorig;
+      seqno -= scd->rseqorig;
+      ackno -= scd->lseqorig;
   }
 
   /* blasted static buffers! */
@@ -189,7 +196,7 @@ void capsck_freeip4devs(pcap_if_t* f)
     }
 }
 
-pcap_t **capsck_openallinterfaces(char *filter, char* errbuf)
+capsck_t *capsck_openallinterfaces(char *filter, char* errbuf)
 //TODO: clean up memory allocations in this function
 //cleanup after this function does not require anything special because I did an array/pointer instead of a linked list
 // You can just free() it
@@ -206,6 +213,7 @@ pcap_t **capsck_openallinterfaces(char *filter, char* errbuf)
     int has_ipv4_addr;
     pcap_t **descr;
     struct bpf_program fp;
+    capsck_t *ret;
 
 
     if (pcap_findalldevs(&alldevs, errbuf) == -1)
@@ -275,17 +283,20 @@ pcap_t **capsck_openallinterfaces(char *filter, char* errbuf)
     pcap_freealldevs(alldevs);
     capsck_freeip4devs(f);
 
-    return(descr);
+    ret = malloc(sizeof(capsck_t));
+    ret->caps = descr;
+
+    return(ret);
 
 }
     
-pcap_t **capsck_create(int sck, char* errbuf)
+capsck_t *capsck_create(int sck, char* errbuf)
 {
     struct sockaddr_in laddr;
     struct sockaddr_in raddr;
     socklen_t len;
-    int ret;
-    pcap_t **descr;
+    int r;
+    capsck_t *ret;
     const char lsource[50];
     const char ldest[50];
     const char rsource[50];
@@ -304,9 +315,9 @@ pcap_t **capsck_create(int sck, char* errbuf)
 \**************************************************************************************************************************************************************************************************************/
 
 
-    ret = getsockopt(sck, SOL_SOCKET, SO_TYPE, (void*)&type, &typelen);
+    r = getsockopt(sck, SOL_SOCKET, SO_TYPE, (void*)&type, &typelen);
 
-    if (ret == -1) {
+    if (r == -1) {
         if (errno == ENOTCONN)
             // Gotta connect before trying this, or we don't have two endpoints to bind to
             strcpy(errbuf, "Socket isn't connected");
@@ -326,9 +337,9 @@ pcap_t **capsck_create(int sck, char* errbuf)
 
     len = sizeof(raddr);
 
-    ret = getpeername(sck, (struct sockaddr*)&raddr, &len);
+    r = getpeername(sck, (struct sockaddr*)&raddr, &len);
 
-    if (ret == -1) {
+    if (r == -1) {
         if (errno == ENOTCONN)
             // Gotta connect before trying this, or we don't have two endpoints to bind to
             strcpy(errbuf, "Socket isn't connected");
@@ -346,9 +357,9 @@ pcap_t **capsck_create(int sck, char* errbuf)
         return NULL;
     }
 
-    ret = getsockname(sck, (struct sockaddr*)&laddr, &len);
+    r = getsockname(sck, (struct sockaddr*)&laddr, &len);
 
-    if (ret == -1) {
+    if (r == -1) {
         // the first two errors here should have been caught above on the remote end, but just in case ...
         if (errno == ENOTCONN)
             // Gotta connect before trying this, or we don't have two endpoints to bind to
@@ -399,29 +410,30 @@ pcap_t **capsck_create(int sck, char* errbuf)
 
     printf("PCAP filter = %s\n", filter);
 
-    descr = capsck_openallinterfaces((char *)filter, errbuf);
+    ret = capsck_openallinterfaces((char *)filter, errbuf);
 
-    if (descr == NULL)
+    if (ret == NULL)
     {
         // strcpy(errbuf, "capsck_openallinterfaces failed");
-        return descr;
+        return ret;
     }
 
 
-    return descr;
+    return ret;
 }
 
-void capsck_dispatch(pcap_t **descr)
+void capsck_dispatch(capsck_t *user)
 {
+    pcap_t **descr;
     // to make this work on windows it may be necessary to pcap_dispatch() the entire list of interfaces.
     // See comments above next to pcap_open_live()
 
-    u_char *user = (u_char*)descr;
+    descr = user->caps;
 
     // printf("dispatch %p\n", descr);
 
     while(*descr) {
-        pcap_dispatch(*descr, -1, capsck_callback, user);
+        pcap_dispatch(*descr, -1, capsck_callback, (u_char *)user);
         descr++;
         }
 }
@@ -440,7 +452,7 @@ int main(int argc, char *argv[])
     char errbuf[PCAP_ERRBUF_SIZE];
     struct sockaddr_in serv_addr;
     struct hostent *server;
-    pcap_t **capsck;
+    capsck_t *capsck;
     // struct timeval t;
     int i = 0;
     char buffer[256];
