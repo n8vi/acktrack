@@ -125,7 +125,7 @@ char* capsck_flagstr(u_int flags)
     return ret;
 }
 
-void capsck_callback(u_char *useless,const struct pcap_pkthdr* pkthdr,const u_char*
+void capsck_callback(u_char *user,const struct pcap_pkthdr* pkthdr,const u_char*
         packet)
 {
   static int count = 1;
@@ -174,9 +174,8 @@ void capsck_callback(u_char *useless,const struct pcap_pkthdr* pkthdr,const u_ch
   strcpy(s_src, inet_ntoa(ih->saddr));
   strcpy(s_dst, inet_ntoa(ih->daddr));
 
-  printf("%lu.%.6lu: %15s:%.5d -> %15s:%.5d LEN %.5d SEQ %.8d ACK %.8d [%s]\n", pkthdr->ts.tv_sec, pkthdr->ts.tv_usec, s_src, htons(th->sport), s_dst, htons(th->dport), pkthdr->len, seqno, ackno, capsck_flagstr(htonl(th->offset_reserved_flags_window)));
+  printf("%p: %lu.%.6lu: %15s:%.5d -> %15s:%.5d LEN %.5d SEQ %.8d ACK %.8d [%s]\n", user, pkthdr->ts.tv_sec, pkthdr->ts.tv_usec, s_src, htons(th->sport), s_dst, htons(th->dport), pkthdr->len, seqno, ackno, capsck_flagstr(htonl(th->offset_reserved_flags_window)));
 
-  // printf("\nPacket number [%d], length of this packet is: %d, seq number: %d ack number: %d\n", count++, pkthdr->len, seqno, ackno);
 }
 
 void capsck_freeip4devs(pcap_if_t* f)
@@ -417,8 +416,12 @@ void capsck_dispatch(pcap_t **descr)
     // to make this work on windows it may be necessary to pcap_dispatch() the entire list of interfaces.
     // See comments above next to pcap_open_live()
 
+    u_char *user = (u_char*)descr;
+
+    printf("dispatch %p\n", descr);
+
     while(*descr) {
-        pcap_dispatch(*descr, -1, capsck_callback, NULL);
+        pcap_dispatch(*descr, -1, capsck_callback, user);
         descr++;
         }
 }
