@@ -418,7 +418,7 @@ void capsck_dispatch(pcap_t **descr)
 
     u_char *user = (u_char*)descr;
 
-    printf("dispatch %p\n", descr);
+    // printf("dispatch %p\n", descr);
 
     while(*descr) {
         pcap_dispatch(*descr, -1, capsck_callback, user);
