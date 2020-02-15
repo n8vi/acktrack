@@ -559,8 +559,9 @@ int main(int argc, char *argv[])
         if (n < 0)
             error("ERROR reading from socket");
         if (n > 0) {
-            // printf("read %d octets\n", n);
-            }
+            capsck_dispatch(capsck);
+            printf("read %d octets\n", n);
+        }
         if (n == 0) {
             printf("Connection closed\n");
             capsck_dispatch(capsck);
@@ -571,22 +572,11 @@ int main(int argc, char *argv[])
 #endif
             while (!capsck_isfinished(capsck))
                 capsck_dispatch(capsck);
-            return(0);
+            return 0;
         }
-        // printf("%s\n", buffer);
-        capsck_dispatch(capsck);
-/*
-#ifdef WIN32
-        Sleep(50);
-#else
-        t.tv_sec = 0;
-        t.tv_usec = 50000;
-        select(0,NULL,NULL,NULL, &t);
-#endif
-*/
         i++;
         i %= 100;
-        // if (i == 0) printf("normal thing-doing loop here (last read %d)\n", n);
+        if (i == 0) printf("normal thing-doing loop here (last read %d)\n", n);
         }
         
 }
