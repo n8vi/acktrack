@@ -198,20 +198,22 @@ void capsck_callback(u_char *user,const struct pcap_pkthdr* pkthdr,const u_char*
       ackno -= scd->lseqorig;
   }
 
-  if (islpkt && scd->gotrfin) {
+  if (islpkt && scd->gotrfin && th->ack_number > scd->rfinseq) {
       scd->gotrfinack = 1;
   }
 
-  if (!islpkt && scd->gotlfin) {
+  if (!islpkt && scd->gotlfin && th->ack_number > scd->lfinseq) {
       scd->gotlfinack = 1;
   }
 
   if (htonl(th->offset_reserved_flags_window) & FINFLAG) {
       if (islpkt) {
           scd->gotlfin = 1;
+          scd->lfinseq = th->seq_number;
       }
       else {
           scd->gotrfin = 1;
+          scd->rfinseq = th->seq_number;
       }
   }
    
