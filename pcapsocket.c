@@ -1,7 +1,14 @@
 
 
-// THIS CODE ASSUMES SYN AND ACK NUMBERS ARE 1 AT THE END OF A THREE-WAY HANDSHAKE
-// THIS ASSUMPTION IS INVALID IN THE CASE OF TCP FAST-OPEN, SEE RFC7413
+/* What I've learned here: TCP FIN packets can carry data, but nothing is transmitted from a given side after the FIN.
+* Also the SYN and FIN flags, according to RFC793, consume 1 sequence number, as if they were a byte in the data stream.
+* The end of the session can be detected by looking for a FIN from each end, and an ACK for both FINs.  We need to
+* do this statefully since ACKs are what we care about.  SYN packets can also contain data in the case of Transactional
+* TCP (T/TCP, see RFC1644) or TCP Fast Open (TFO, see RFC7413).
+*
+* THIS CODE ASSUMES SYN AND ACK NUMBERS ARE 1 AT THE END OF A THREE-WAY HANDSHAKE
+* THIS ASSUMPTION IS INVALID IN THE CASE OF TFO OR T/TCP.
+*/
 
 #include <stdlib.h>
 #include <string.h>
