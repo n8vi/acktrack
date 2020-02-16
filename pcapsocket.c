@@ -85,11 +85,13 @@ typedef struct capsck_t{
     u_int gotorigpkt;
     struct timeval origtime;
     int gotrfin;
-    int rfinseq;
     int gotlfin;
+    int lastrseq;
+    int lastlseq;
+    int lastrack;
+    int lastlack;
     int lfinseq;
-    int gotlfinack;
-    int gotrfinack;
+    int rfinseq;
     pcap_t **caps;
 }capsck_t;
 
@@ -151,11 +153,28 @@ void capsck_free(capsck_t *capsck)
     free(capsck);
 }
 
+u_int relseq(capsck_t *capsck, u_int absseq, int islseq)
+{
+    if (islseq) {
+        absseq -= capsck->lseqorig;
+    } else {
+        absseq -= capsck->rseqorig;
+        }
+    return absseq;
+}
+
 int capsck_isfinished(capsck_t *capsck)
 {
-    int ret = capsck->gotlfinack && capsck->gotrfinack;
-    return ret;
+    // int ret = capsck->gotlfinack && capsck->gotrfinack;
+    // return ret;
+
+    // sleep(1);
+
+    // printf(" {{ %d/%d %u > %u, %u > %u }}\n", capsck->gotlfin , capsck->gotrfin , relseq(capsck, capsck->lastlack, 1) , relseq(capsck, capsck->lfinseq, 1) , relseq(capsck, capsck->lastrack, 0) , relseq(capsck, capsck->rfinseq,0));
+
+    return capsck->gotlfin && capsck->gotrfin && capsck->lastlack > capsck->lfinseq && capsck->lastrack > capsck->rfinseq;
 }
+
 
 void capsck_callback(u_char *user,const struct pcap_pkthdr* pkthdr,const u_char*
         packet)
@@ -163,8 +182,10 @@ void capsck_callback(u_char *user,const struct pcap_pkthdr* pkthdr,const u_char*
   static int count = 1;
   capsck_t *scd = (capsck_t *)user;
   u_int ip_len;
-  u_int seqno;
-  u_int ackno;
+  u_int absseqno;
+  u_int absackno;
+  u_int relseqno;
+  u_int relackno;
   u_short sport;
   u_short dport;
   char s_src[16];
@@ -181,46 +202,57 @@ void capsck_callback(u_char *user,const struct pcap_pkthdr* pkthdr,const u_char*
   sport = htons(th->sport);
   dport = htons(th->dport);
 
-  seqno = htonl(th->seq_number);
-  ackno = htonl(th->ack_number);
+  absseqno = htonl(th->seq_number);
+  absackno = htonl(th->ack_number);
 
   if (!scd->gotorigpkt) {
     memcpy(&scd->laddr, &ih->saddr, sizeof(struct in_addr));
     memcpy(&scd->raddr, &ih->daddr, sizeof(struct in_addr));
     scd->lport = sport;
     scd->rport = dport;
-    scd->lseqorig = seqno - 1;
-    scd->rseqorig = ackno - 1;
+    scd->lseqorig = absseqno - 1;
+    scd->rseqorig = absackno - 1;
     memcpy(&scd->origtime, &pkthdr->ts, sizeof(struct timeval));
     scd->gotorigpkt = 1;
     islpkt = 1;
-    } 
+  } else  if (!memcmp(&scd->laddr, &ih->saddr, sizeof(struct in_addr)) && sport == scd->lport) {
+    islpkt = 1;
+    }
 
-  if (!memcmp(&scd->laddr, &ih->saddr, sizeof(struct in_addr)) && sport == scd->lport) {
-      seqno -= scd->lseqorig;
-      ackno -= scd->rseqorig;
-      islpkt = 1;
+  relseqno = relseq(scd, absseqno, islpkt);
+  relackno = relseq(scd, absackno, !islpkt);
+
+  if (islpkt && scd->gotrfin && absackno > scd->lastrseq) {
+      printf("Got RFIN ACK: %d to %d\n", relackno, relseq(scd, scd->lastrseq, 0));
+  }
+
+  if (!islpkt && scd->gotlfin && absackno > scd->lastlseq) {
+      printf("Got LFIN ACK: %d to %d\n", relackno, relseq(scd, scd->lastlseq, 1));
+  }
+
+  if (islpkt) {
+    // printf("local packet ack %lu - %lu  = %lu\n", scd->rseqorig, absackno, relackno);
+    if (absseqno > scd->lastlseq)
+        scd->lastlseq = absseqno;
+    if (absackno > scd->lastrack)
+        scd->lastrack = absackno;
   } else {
-      seqno -= scd->rseqorig;
-      ackno -= scd->lseqorig;
-  }
-
-  if (islpkt && scd->gotrfin && th->ack_number > scd->rfinseq) {
-      scd->gotrfinack = 1;
-  }
-
-  if (!islpkt && scd->gotlfin && th->ack_number > scd->lfinseq) {
-      scd->gotlfinack = 1;
-  }
+    if (absseqno > scd->lastrseq)
+        scd->lastrseq = absseqno;
+    if (absackno > scd->lastlack)
+        scd->lastlack = absackno;
+    }
 
   if (htonl(th->offset_reserved_flags_window) & FINFLAG) {
       if (islpkt) {
           scd->gotlfin = 1;
-          scd->lfinseq = th->seq_number;
+          scd->lfinseq = absseqno;
+          printf("Got LFIN: %d\n", relseqno);
       }
       else {
           scd->gotrfin = 1;
-          scd->rfinseq = th->seq_number;
+          scd->rfinseq = absseqno;
+          printf("Got RFIN: %d\n", relseqno);
       }
   }
    
@@ -229,7 +261,7 @@ void capsck_callback(u_char *user,const struct pcap_pkthdr* pkthdr,const u_char*
   strcpy(s_src, inet_ntoa(ih->saddr));
   strcpy(s_dst, inet_ntoa(ih->daddr));
 
-  printf("%lu.%.6lu: %15s:%.5d -> %15s:%.5d LEN %.5d SEQ %.8d ACK %.8d [%s]\n", pkthdr->ts.tv_sec, pkthdr->ts.tv_usec, s_src, htons(th->sport), s_dst, htons(th->dport), pkthdr->len, seqno, ackno, capsck_flagstr(htonl(th->offset_reserved_flags_window)));
+  printf("%lu.%.6lu: %15s:%.5d -> %15s:%.5d LEN %.5d SEQ %.8d ACK %.8d [%s]\n", pkthdr->ts.tv_sec, pkthdr->ts.tv_usec, s_src, htons(th->sport), s_dst, htons(th->dport), pkthdr->len, relseqno, relackno, capsck_flagstr(htonl(th->offset_reserved_flags_window)));
 
 }
 
@@ -569,7 +601,7 @@ int main(int argc, char *argv[])
             error("ERROR reading from socket");
         if (n > 0) {
             capsck_dispatch(capsck);
-            printf("read %d octets\n", n);
+            // printf("read %d octets\n", n);
         }
         if (n == 0) {
             printf("Connection closed\n");
@@ -585,7 +617,7 @@ int main(int argc, char *argv[])
         }
         i++;
         i %= 100;
-        if (i == 0) printf("normal thing-doing loop here (last read %d)\n", n);
+        // if (i == 0) printf("normal thing-doing loop here (last read %d)\n", n);
         }
         
 }
