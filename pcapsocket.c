@@ -144,7 +144,13 @@ void capsck_callback(u_char *user,const struct pcap_pkthdr* pkthdr,const u_char*
   char s_src[16];
   char s_dst[16];
   int islpkt = 0;
-  int newnumbers = 0;
+  int gotlack = 0;
+  int gotlseq = 0;
+  u_short datalen = 0;
+  u_short ihl = 0;
+  u_int tcp_len = 0;
+  u_int orfw;
+
 
   ip_header *ih;
   tcp_header *th;
@@ -153,11 +159,21 @@ void capsck_callback(u_char *user,const struct pcap_pkthdr* pkthdr,const u_char*
   ip_len = (ih->ver_ihl & 0xf) * 4;
   th = (tcp_header *) ((u_char*)ih + ip_len);
 
+  orfw = htonl(th->offset_reserved_flags_window);
+
   sport = htons(th->sport);
   dport = htons(th->dport);
 
   absseqno = htonl(th->seq_number);
   absackno = htonl(th->ack_number);
+
+  tcp_len = ((orfw & 0xf0000000) >> 28) * 4;
+  datalen = ntohs(ih->tlen) - tcp_len - ip_len;
+
+  if (orfw & SYNFLAG) 
+    datalen++;
+  if (orfw & FINFLAG) 
+    datalen++;
 
   if (!scd->gotorigpkt) {
     memcpy(&scd->laddr, &ih->saddr, sizeof(struct in_addr));
@@ -175,11 +191,13 @@ void capsck_callback(u_char *user,const struct pcap_pkthdr* pkthdr,const u_char*
     // printf("remote packet %s:%d vs %s %d\n", inet_ntoa(scd->laddr), scd->lport, inet_ntoa(ih->saddr), sport);
     }
 
-  memcpy(&scd->lastpkttime, &pkthdr->ts, sizeof(struct timeval));
+  scd->lastpktislocal = islpkt;
+
 
   relseqno = relseq(scd, absseqno, islpkt);
   relackno = relseq(scd, absackno, !islpkt);
 
+/*
   if (islpkt && scd->gotrfin && absackno > scd->lastrseq) {
       printf("Got RFIN ACK: %d to %d\n", relackno, relseq(scd, scd->lastrseq, 0));
   }
@@ -187,43 +205,46 @@ void capsck_callback(u_char *user,const struct pcap_pkthdr* pkthdr,const u_char*
   if (!islpkt && scd->gotlfin && absackno > scd->lastlseq) {
       printf("Got LFIN ACK: %d to %d\n", relackno, relseq(scd, scd->lastlseq, 1));
   }
+*/
 
   if (islpkt) {
     // printf("local packet ack %lu - %lu  = %lu\n", scd->rseqorig, absackno, relackno);
     if (absseqno > scd->lastlseq) {
         scd->lastlseq = absseqno;
-        newnumbers = 1;
+        // memcpy(&scd->lastseqtime, &pkthdr->ts, sizeof(struct timeval));
+        gotlseq = 1;
         }
     if (absackno > scd->lastrack) {
         scd->lastrack = absackno;
-        newnumbers = 1;
         }
   } else {
     if (absseqno > scd->lastrseq) {
         scd->lastrseq = absseqno;
-        newnumbers = 1;
         }
     if (absackno > scd->lastlack) {
         scd->lastlack = absackno;
-        newnumbers = 1;
+        memcpy(&scd->lastacktime, &pkthdr->ts, sizeof(struct timeval));
+        gotlack = 1;
         }
     }
 
-  if (htonl(th->offset_reserved_flags_window) & FINFLAG) {
+  if (orfw & FINFLAG) {
       if (islpkt) {
           scd->gotlfin = 1;
           scd->lfinseq = absseqno;
-          printf("Got LFIN: %d\n", relseqno);
+          // printf("Got LFIN: %d\n", relseqno);
       }
       else {
           scd->gotrfin = 1;
           scd->rfinseq = absseqno;
-          printf("Got RFIN: %d\n", relseqno);
+          // printf("Got RFIN: %d\n", relseqno);
       }
   }
 
-  scd->lastpktislocal = islpkt;
-  scd->last_orfw = htonl(th->offset_reserved_flags_window);
+  if (gotlack)
+    printf("   ---> ACK: %lu.%.6lu: %8d\n", pkthdr->ts.tv_sec, pkthdr->ts.tv_usec, relackno);
+  if (islpkt)
+    printf("   <--- SEQ: %lu.%.6lu: %8d+%8d=%8d\n", pkthdr->ts.tv_sec, pkthdr->ts.tv_usec, relseqno, datalen, relseqno+datalen);
 
 
 // ALL BELOW WILL BE USER CALLBACK SHORTLY
@@ -238,9 +259,9 @@ void capsck_callback(u_char *user,const struct pcap_pkthdr* pkthdr,const u_char*
   }
 
 
-  printf("%lu.%.6lu: %15s:%.5d -> %15s:%.5d SEQ %.8d ACK %.8d [%s]\n", scd->lastpkttime.tv_sec, scd->lastpkttime.tv_usec, s_src, htons(th->sport), s_dst, htons(th->dport), relseqno, relackno, capsck_flagstr(scd->last_orfw));
+  // printf("%lu.%.6lu: %15s:%.5d -> %15s:%.5d SEQ %.8d ACK %.8d [%s]\n", scd->lastpkttime.tv_sec, scd->lastpkttime.tv_usec, s_src, htons(th->sport), s_dst, htons(th->dport), relseqno, relackno, capsck_flagstr(scd->last_orfw));
 
-  // printf("%lu.%.6lu: %15s:%.5d -> %15s:%.5d LEN %.5d SEQ %.8d ACK %.8d [%s]\n", pkthdr->ts.tv_sec, pkthdr->ts.tv_usec, s_src, htons(th->sport), s_dst, htons(th->dport), pkthdr->len, relseqno, relackno, capsck_flagstr(htonl(th->offset_reserved_flags_window)));
+  printf("%lu.%.6lu: %15s:%.5d -> %15s:%.5d LEN %.5d SEQ %.8d ACK %.8d [%s]\n", pkthdr->ts.tv_sec, pkthdr->ts.tv_usec, s_src, htons(th->sport), s_dst, htons(th->dport), pkthdr->len, relseqno, relackno, capsck_flagstr(orfw));
 
 }
 
@@ -482,18 +503,18 @@ capsck_t *capsck_create(int sck, char* errbuf)
     return ret;
 }
 
-void capsck_dispatch(capsck_t *user)
+void capsck_dispatch(capsck_t *capsck)
 {
     pcap_t **descr;
     // to make this work on windows it may be necessary to pcap_dispatch() the entire list of interfaces.
     // See comments above next to pcap_open_live()
 
-    descr = user->caps;
+    descr = capsck->caps;
 
     // printf("dispatch %p\n", descr);
 
     while(*descr) {
-        pcap_dispatch(*descr, -1, capsck_callback, (u_char *)user);
+        pcap_dispatch(*descr, -1, capsck_callback, (u_char *)capsck);
         descr++;
         }
 }
