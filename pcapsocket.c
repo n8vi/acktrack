@@ -10,28 +10,7 @@
 * THIS ASSUMPTION IS INVALID IN THE CASE OF TFO OR T/TCP.
 */
 
-#include <stdlib.h>
-#include <string.h>
-#include <stdio.h>
-#include <sys/types.h>
-#include <errno.h>
-#include "pcap.h"
-
-#ifndef WIN32
-#include <unistd.h>
-#include <sys/socket.h>
-#include <netinet/in.h>
-#include <netdb.h> 
-#include <arpa/inet.h>
-#include <sys/select.h>
-#else
-#include <windows.h>
-#include <winsock.h>
-#define bzero(b,len) (memset((b), '\0', (len)), (void) 0)
-#define bcopy(b1,b2,len) (memmove((b2), (b1), (len)), (void) 0)
-#define PCAP_NETMASK_UNKNOWN 0xffffffff
-#define sleep(x) Sleep((x*1000))
-#endif
+#include "pcapsocket.h"
 
 #ifndef SOCKET_ERROR
 #define SOCKET_ERROR (-1)
@@ -74,32 +53,6 @@ typedef struct tcp_header{
 #define PSHFLAG (1<<19)
 #define ACKFLAG (1<<20)
 #define URGFLAG (1<<21)
-
-typedef struct capsck_t{
-    struct in_addr laddr;
-    struct in_addr raddr;
-    u_short lport;
-    u_short rport;
-    int lseqorig;
-    int rseqorig;
-    u_int gotorigpkt;
-    struct timeval origtime;
-    int gotrfin;
-    int gotlfin;
-    int lastrseq;
-    int lastlseq;
-    int lastrack;
-    int lastlack;
-    int lfinseq;
-    int rfinseq;
-    pcap_t **caps;
-}capsck_t;
-
-void error(char *msg)
-{
-    perror(msg);
-    exit(0);
-}
 
 char* capsck_flagstr(u_int flags)
 {
@@ -191,6 +144,7 @@ void capsck_callback(u_char *user,const struct pcap_pkthdr* pkthdr,const u_char*
   char s_src[16];
   char s_dst[16];
   int islpkt = 0;
+  int newnumbers = 0;
 
   ip_header *ih;
   tcp_header *th;
@@ -208,8 +162,8 @@ void capsck_callback(u_char *user,const struct pcap_pkthdr* pkthdr,const u_char*
   if (!scd->gotorigpkt) {
     memcpy(&scd->laddr, &ih->saddr, sizeof(struct in_addr));
     memcpy(&scd->raddr, &ih->daddr, sizeof(struct in_addr));
-    scd->lport = sport;
-    scd->rport = dport;
+    scd->lport = htons(th->sport);
+    scd->rport = htons(th->dport);
     scd->lseqorig = absseqno - 1;
     scd->rseqorig = absackno - 1;
     memcpy(&scd->origtime, &pkthdr->ts, sizeof(struct timeval));
@@ -217,7 +171,11 @@ void capsck_callback(u_char *user,const struct pcap_pkthdr* pkthdr,const u_char*
     islpkt = 1;
   } else  if (!memcmp(&scd->laddr, &ih->saddr, sizeof(struct in_addr)) && sport == scd->lport) {
     islpkt = 1;
+  } else {
+    // printf("remote packet %s:%d vs %s %d\n", inet_ntoa(scd->laddr), scd->lport, inet_ntoa(ih->saddr), sport);
     }
+
+  memcpy(&scd->lastpkttime, &pkthdr->ts, sizeof(struct timeval));
 
   relseqno = relseq(scd, absseqno, islpkt);
   relackno = relseq(scd, absackno, !islpkt);
@@ -232,15 +190,23 @@ void capsck_callback(u_char *user,const struct pcap_pkthdr* pkthdr,const u_char*
 
   if (islpkt) {
     // printf("local packet ack %lu - %lu  = %lu\n", scd->rseqorig, absackno, relackno);
-    if (absseqno > scd->lastlseq)
+    if (absseqno > scd->lastlseq) {
         scd->lastlseq = absseqno;
-    if (absackno > scd->lastrack)
+        newnumbers = 1;
+        }
+    if (absackno > scd->lastrack) {
         scd->lastrack = absackno;
+        newnumbers = 1;
+        }
   } else {
-    if (absseqno > scd->lastrseq)
+    if (absseqno > scd->lastrseq) {
         scd->lastrseq = absseqno;
-    if (absackno > scd->lastlack)
+        newnumbers = 1;
+        }
+    if (absackno > scd->lastlack) {
         scd->lastlack = absackno;
+        newnumbers = 1;
+        }
     }
 
   if (htonl(th->offset_reserved_flags_window) & FINFLAG) {
@@ -255,13 +221,26 @@ void capsck_callback(u_char *user,const struct pcap_pkthdr* pkthdr,const u_char*
           printf("Got RFIN: %d\n", relseqno);
       }
   }
-   
+
+  scd->lastpktislocal = islpkt;
+  scd->last_orfw = htonl(th->offset_reserved_flags_window);
+
+
+// ALL BELOW WILL BE USER CALLBACK SHORTLY
 
   /* blasted static buffers! */
-  strcpy(s_src, inet_ntoa(ih->saddr));
-  strcpy(s_dst, inet_ntoa(ih->daddr));
+  if (scd->lastpktislocal) {
+      strcpy(s_src, inet_ntoa(scd->laddr));
+      strcpy(s_dst, inet_ntoa(scd->raddr));
+  } else {
+      strcpy(s_src, inet_ntoa(scd->raddr));
+      strcpy(s_dst, inet_ntoa(scd->laddr));
+  }
 
-  printf("%lu.%.6lu: %15s:%.5d -> %15s:%.5d LEN %.5d SEQ %.8d ACK %.8d [%s]\n", pkthdr->ts.tv_sec, pkthdr->ts.tv_usec, s_src, htons(th->sport), s_dst, htons(th->dport), pkthdr->len, relseqno, relackno, capsck_flagstr(htonl(th->offset_reserved_flags_window)));
+
+  printf("%lu.%.6lu: %15s:%.5d -> %15s:%.5d SEQ %.8d ACK %.8d [%s]\n", scd->lastpkttime.tv_sec, scd->lastpkttime.tv_usec, s_src, htons(th->sport), s_dst, htons(th->dport), relseqno, relackno, capsck_flagstr(scd->last_orfw));
+
+  // printf("%lu.%.6lu: %15s:%.5d -> %15s:%.5d LEN %.5d SEQ %.8d ACK %.8d [%s]\n", pkthdr->ts.tv_sec, pkthdr->ts.tv_usec, s_src, htons(th->sport), s_dst, htons(th->dport), pkthdr->len, relseqno, relackno, capsck_flagstr(htonl(th->offset_reserved_flags_window)));
 
 }
 
@@ -517,107 +496,4 @@ void capsck_dispatch(capsck_t *user)
         pcap_dispatch(*descr, -1, capsck_callback, (u_char *)user);
         descr++;
         }
-}
-
-int main(int argc, char *argv[])
-{
-
-#ifndef WIN32
-    int sockfd;
-#else
-    SOCKET sockfd;
-#endif
-    
-    int portno, n; // , ret;
-
-    char errbuf[PCAP_ERRBUF_SIZE];
-    struct sockaddr_in serv_addr;
-    struct hostent *server;
-    capsck_t *capsck;
-    // struct timeval t;
-    int i = 0;
-    char buffer[256];
- 
-    int iResult;
-
-#ifdef WIN32
-    WSADATA wsaData;
-    // Initialize Winsock
-    iResult = WSAStartup(MAKEWORD(2, 2), &wsaData);
-    if (iResult != 0) {
-        printf("WSAStartup failed: %d\n", iResult);
-        return 1;
-    }
-#endif
-
-    printf("\n\n");
- 
-    if (argc < 3) {
-       fprintf(stderr,"usage %s hostname port\n", argv[0]);
-       exit(0);
-    }
-    portno = atoi(argv[2]);
-    sockfd = socket(AF_INET, SOCK_STREAM, 0);
-    if (sockfd < 0) 
-        error("ERROR opening socket");
-
-    printf("Connecting to host %s port %d\n", argv[1], portno);
-    server = gethostbyname(argv[1]);
-    if (server == NULL) {
-        fprintf(stderr,"ERROR, no such host\n");
-        exit(0);
-    }
-    bzero((char *) &serv_addr, sizeof(serv_addr));
-    serv_addr.sin_family = AF_INET;
-    bcopy((char *)server->h_addr, 
-         (char *)&serv_addr.sin_addr.s_addr,
-         server->h_length);
-    serv_addr.sin_port = htons(portno);
-
-    if (connect(sockfd,(struct sockaddr *)&serv_addr,sizeof(serv_addr)) < 0) 
-        error("ERROR connecting");
-
-    capsck = capsck_create(sockfd, errbuf);
-
-    printf("connected ... \n");
-    // sleep (5);
-
-    if (capsck == NULL) {
-        fprintf(stderr, "%s\n", errbuf);
-        exit(0);
-        }
-
-    strcpy(buffer, "GET /\r\n");
-    n = send(sockfd, buffer, strlen(buffer),0);
-    if (n < 0)
-        error("ERROR writing to socket");
-
-
-    // Perhaps in a thread?
-    while (1) {
-        // n = read(sockfd, buffer, 255);
-        n = recv(sockfd, buffer, sizeof(buffer)-1, 0);
-        if (n < 0)
-            error("ERROR reading from socket");
-        if (n > 0) {
-            capsck_dispatch(capsck);
-            // printf("read %d octets\n", n);
-        }
-        if (n == 0) {
-            printf("Connection closed\n");
-            capsck_dispatch(capsck);
-#ifdef WIN32
-            closesocket(sockfd);
-#else
-            close(sockfd);
-#endif
-            while (!capsck_isfinished(capsck))
-                capsck_dispatch(capsck);
-            return 0;
-        }
-        i++;
-        i %= 100;
-        // if (i == 0) printf("normal thing-doing loop here (last read %d)\n", n);
-        }
-        
 }
