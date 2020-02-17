@@ -29,6 +29,12 @@
 #include <winsock.h>
 #endif
 
+typedef struct sequence_event {
+    struct timeval ts;
+    u_char is_local;
+    u_int seqno;
+} sequence_event_t;
+
 typedef struct capsck_t{
     struct in_addr laddr;        /* local IP address  */
     struct in_addr raddr;        /* remote IP address */
@@ -50,9 +56,12 @@ typedef struct capsck_t{
     int rfinseq;                 /* the sequence number of the FIN from the remote if gotrfin */
     pcap_t **caps;               /* an array of pcap handles of all nterfaces with ipv4 on them */
     int lastpktislocal;          /* nonzero if last packet seen was sent by us */
+    void *cb;
 }capsck_t;
+
+typedef void (*capsck_cb_t)(capsck_t*, sequence_event_t *);
 
 void capsck_free(capsck_t *capsck);
 int capsck_isfinished(capsck_t *capsck);
-capsck_t *capsck_create(int sck, char* errbuf);
+capsck_t *capsck_create(int sck, char* errbuf, capsck_cb_t cb);
 void capsck_dispatch(capsck_t *capsck);

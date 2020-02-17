@@ -150,6 +150,8 @@ void capsck_callback(u_char *user,const struct pcap_pkthdr* pkthdr,const u_char*
   u_short ihl = 0;
   u_int tcp_len = 0;
   u_int orfw;
+  sequence_event_t cb_data;
+  capsck_cb_t cb = (capsck_cb_t)scd->cb;
 
 
   ip_header *ih;
@@ -242,9 +244,21 @@ void capsck_callback(u_char *user,const struct pcap_pkthdr* pkthdr,const u_char*
   }
 
   if (gotlack)
-    printf("   ---> ACK: %lu.%.6lu: %8d\n", pkthdr->ts.tv_sec, pkthdr->ts.tv_usec, relackno);
-  if (islpkt)
-    printf("   <--- SEQ: %lu.%.6lu: %8d+%8d=%8d\n", pkthdr->ts.tv_sec, pkthdr->ts.tv_usec, relseqno, datalen, relseqno+datalen);
+    // printf("   ---> ACK: %lu.%.6lu: %8d\n", pkthdr->ts.tv_sec, pkthdr->ts.tv_usec, relackno);
+    if (scd->cb) {
+        memcpy(&cb_data.ts, &pkthdr->ts, sizeof(struct timeval));
+        cb_data.is_local = 0;
+        cb_data.seqno = relackno;
+        cb(scd, &cb_data);
+        }
+  if (islpkt && datalen > 0)
+    // printf("   <--- SEQ: %lu.%.6lu: %8d+%8d=%8d\n", pkthdr->ts.tv_sec, pkthdr->ts.tv_usec, relseqno, datalen, relseqno+datalen);
+    if (scd->cb) {
+        memcpy(&cb_data.ts, &pkthdr->ts, sizeof(struct timeval));
+        cb_data.is_local = 1;
+        cb_data.seqno = relseqno+datalen;
+        cb(scd, &cb_data);
+        }
 
 
 // ALL BELOW WILL BE USER CALLBACK SHORTLY
@@ -261,7 +275,7 @@ void capsck_callback(u_char *user,const struct pcap_pkthdr* pkthdr,const u_char*
 
   // printf("%lu.%.6lu: %15s:%.5d -> %15s:%.5d SEQ %.8d ACK %.8d [%s]\n", scd->lastpkttime.tv_sec, scd->lastpkttime.tv_usec, s_src, htons(th->sport), s_dst, htons(th->dport), relseqno, relackno, capsck_flagstr(scd->last_orfw));
 
-  printf("%lu.%.6lu: %15s:%.5d -> %15s:%.5d LEN %.5d SEQ %.8d ACK %.8d [%s]\n", pkthdr->ts.tv_sec, pkthdr->ts.tv_usec, s_src, htons(th->sport), s_dst, htons(th->dport), pkthdr->len, relseqno, relackno, capsck_flagstr(orfw));
+  // printf("%lu.%.6lu: %15s:%.5d -> %15s:%.5d LEN %.5d SEQ %.8d ACK %.8d [%s]\n", pkthdr->ts.tv_sec, pkthdr->ts.tv_usec, s_src, htons(th->sport), s_dst, htons(th->dport), pkthdr->len, relseqno, relackno, capsck_flagstr(orfw));
 
 }
 
@@ -309,7 +323,7 @@ capsck_t *capsck_openallinterfaces(char *filter, char* errbuf)
             continue;
             }
 
-        printf("  Interface %s has ipv4.  Adding to list of interfaces to capture on.\n", d->name);
+        // printf("  Interface %s has ipv4.  Adding to list of interfaces to capture on.\n", d->name);
 
         p = m;
         m = malloc(sizeof(pcap_if_t));
@@ -371,7 +385,7 @@ capsck_t *capsck_openallinterfaces(char *filter, char* errbuf)
 
 }
     
-capsck_t *capsck_create(int sck, char* errbuf)
+capsck_t *capsck_create(int sck, char* errbuf, capsck_cb_t cb)
 {
     struct sockaddr_in laddr;
     struct sockaddr_in raddr;
@@ -489,7 +503,7 @@ capsck_t *capsck_create(int sck, char* errbuf)
 
     sprintf((char *)filter, "tcp and ((%s and %s) or (%s and %s))", lsource, rdest, rsource, ldest);
 
-    printf("PCAP filter = %s\n", filter);
+    // printf("PCAP filter = %s\n", filter);
 
     ret = capsck_openallinterfaces((char *)filter, errbuf);
 
@@ -499,6 +513,7 @@ capsck_t *capsck_create(int sck, char* errbuf)
         return ret;
     }
 
+    ret->cb = cb;
 
     return ret;
 }

@@ -8,6 +8,15 @@ void error(char *msg)
 }
 
 
+void mycallback(capsck_t *cs, sequence_event_t *se)
+{
+  if (se->is_local) {
+    printf("  <-- SEQ %lu.%lu: %d\n", se->ts.tv_sec, se->ts.tv_usec, se->seqno);
+  } else {
+    printf("  --> ACK %lu.%lu: %d\n", se->ts.tv_sec, se->ts.tv_usec, se->seqno);
+    }
+}
+
 
 int main(int argc, char *argv[])
 {
@@ -67,7 +76,7 @@ int main(int argc, char *argv[])
     if (connect(sockfd,(struct sockaddr *)&serv_addr,sizeof(serv_addr)) < 0) 
         error("ERROR connecting");
 
-    capsck = capsck_create(sockfd, errbuf);
+    capsck = capsck_create(sockfd, errbuf, mycallback);
 
     printf("connected ... \n");
     // sleep (5);
