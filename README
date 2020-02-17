@@ -5,5 +5,6 @@ Under linux, "make" builds and "make test" runs the code under gdb.
 
 Under windows, the code can be built with vidual studio by loading pcapsocket.sln.
 
-Right now the code functions, but almost certainly has memory leaks that would be disastrous in
-production.  Cleanup of that likely issue is the next step.
+Right now the code functions as a demo.  I am in the process of splitting it into a library and an
+executable to demo that library, while maintaining linux/windows cross-platformness.
+
