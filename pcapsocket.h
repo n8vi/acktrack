@@ -55,22 +55,22 @@ typedef struct capsck_t{
     struct in_addr raddr;        /* remote IP address */
     u_short lport;               /* local TCP port    */
     u_short rport;               /* remote TCP port   */
-    int lseqorig;                /* Local initial sequence number SEE ABOVE */
-    int rseqorig;                /* remote initial sequence number SEE ABOVE */
+    u_int lseqorig;                /* Local initial sequence number SEE ABOVE */
+    u_int rseqorig;                /* remote initial sequence number SEE ABOVE */
     u_int gotorigpkt;            /* nonzero if we have captured more than zero packets */
     struct timeval origtime;     /* time the original packet arrived */
     struct timeval lastacktime;  /* time the last ACK arrived from the remote */
     struct timeval lastsenttime; /* time we sent the last SEQ to the remote */
-    int gotrfin;                 /* nonzero if we've received a FIN from the remote */
-    int gotlfin;                 /* nonzero if we've sent a FIN */
-    int lastrseq;                /* the last sequence number from the remote */
-    int lastlseq;                /* our last sequence number */
-    int lastrack;                /* the last ack we sent to the remote */
-    int lastlack;                /* the last ack we got */
-    int lfinseq;                 /* the sequence number of our local FIN packet if gotlfin */
-    int rfinseq;                 /* the sequence number of the FIN from the remote if gotrfin */
+    u_char gotrfin;                 /* nonzero if we've received a FIN from the remote */
+    u_char gotlfin;                 /* nonzero if we've sent a FIN */
+    u_int lastrseq;                /* the last sequence number from the remote */
+    u_int lastlseq;                /* our last sequence number */
+    u_int lastrack;                /* the last ack we sent to the remote */
+    u_int lastlack;                /* the last ack we got */
+    u_int lfinseq;                 /* the sequence number of our local FIN packet if gotlfin */
+    u_int rfinseq;                 /* the sequence number of the FIN from the remote if gotrfin */
     pcap_t **caps;               /* an array of pcap handles of all nterfaces with ipv4 on them */
-    int lastpktislocal;          /* nonzero if last packet seen was sent by us */
+    u_char lastpktislocal;          /* nonzero if last packet seen was sent by us */
     void *cb;
 }capsck_t;
 
