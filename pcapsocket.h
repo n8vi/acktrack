@@ -50,6 +50,7 @@ typedef struct sequence_event {
     u_int seqno;
 } sequence_event_t;
 
+/* The following struct may be subject to change */
 typedef struct capsck_t{
     struct in_addr laddr;        /* local IP address  */
     struct in_addr raddr;        /* remote IP address */
