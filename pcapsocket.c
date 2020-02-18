@@ -12,9 +12,6 @@
 
 #include "pcapsocket.h"
 
-#ifndef SOCKET_ERROR
-#define SOCKET_ERROR (-1)
-#endif
 
 /* 4 bytes IP address */
 typedef struct ip_address{

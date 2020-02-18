@@ -29,6 +29,21 @@
 #include <winsock.h>
 #endif
 
+#ifndef SOCKET_ERROR
+#define SOCKET_ERROR (-1)
+#endif
+
+#ifndef PCAP_NETMASK_UNKNOWN 
+#define PCAP_NETMASK_UNKNOWN 0xffffffff
+#endif
+
+#ifdef WIN32
+#define bzero(b,len) (memset((b), '\0', (len)), (void) 0)
+#define bcopy(b1,b2,len) (memmove((b2), (b1), (len)), (void) 0)
+#define sleep(x) Sleep((x*1000))
+#endif
+
+
 typedef struct sequence_event {
     struct timeval ts;
     u_char is_local;

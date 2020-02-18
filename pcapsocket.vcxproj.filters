@@ -18,9 +18,15 @@
     <ClCompile Include="pcapsocket.c">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="demo.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="pcap\include\pcap.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="pcapsocket.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>

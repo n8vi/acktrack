@@ -121,11 +121,13 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClCompile Include="demo.c" />
     <ClCompile Include="pcapsocket.c">
       <FunctionLevelLinking Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">true</FunctionLevelLinking>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="pcapsocket.h" />
     <ClInclude Include="pcap\include\pcap.h" />
   </ItemGroup>
   <ItemGroup>
