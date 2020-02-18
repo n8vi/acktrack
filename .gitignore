@@ -1,5 +1,5 @@
-demo
 *.o
 .*.sw*
 .vs
 Debug
+demo/capsckdemo/Debug
