@@ -10,6 +10,16 @@
 * THIS ASSUMPTION IS INVALID IN THE CASE OF TFO OR T/TCP.
 */
 
+#pragma once
+
+#ifdef WIN32
+#ifdef PCAPSOCKET_EXPORTS
+#define PCAPSOCKET_API __declspec(dllexport)
+#else
+#define PCAPSOCKET_API __declspec(dllimport)
+#endif
+#endif
+
 #include <stdlib.h>
 #include <string.h>
 #include <stdio.h>
@@ -77,7 +87,7 @@ typedef struct capsck_t{
 
 typedef void (*capsck_cb_t)(capsck_t*, sequence_event_t *);
 
-void capsck_free(capsck_t *capsck);
-int capsck_isfinished(capsck_t *capsck);
-capsck_t *capsck_create(int sck, char* errbuf, capsck_cb_t cb);
-void capsck_dispatch(capsck_t *capsck);
+extern "C" PCAPSOCKET_API void capsck_free(capsck_t *capsck);
+extern "C" PCAPSOCKET_API int capsck_isfinished(capsck_t *capsck);
+extern "C" PCAPSOCKET_API capsck_t *capsck_create(int sck, char* errbuf, capsck_cb_t cb);
+extern "C" PCAPSOCKET_API void capsck_dispatch(capsck_t *capsck);
