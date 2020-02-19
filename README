@@ -3,8 +3,7 @@ with a given socket can be found in "pcapsocket.c"
 
 Under linux, "make" builds and "make test" runs the code under gdb.
 
-Under windows, the code can be built with vidual studio by loading pcapsocket.sln.
+Under windows, the code can be built and debugged with visual studio by loading pcapsocket.sln.
 
-Right now the code functions as a demo.  I am in the process of splitting it into a library and an
-executable to demo that library, while maintaining linux/windows cross-platformness.
-
+Right now the code compiles a DLL and a test EXE under visual studio.  I am in the process of making it compile
+a shared object and a test binary in linux.
