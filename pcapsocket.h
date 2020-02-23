@@ -58,6 +58,7 @@ typedef struct sequence_event {
     struct timeval ts;
     u_char is_local;
     u_int seqno;
+    u_char is_interesting;
 } sequence_event_t;
 
 /* The following struct may be subject to change */

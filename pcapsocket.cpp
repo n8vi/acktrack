@@ -130,155 +130,122 @@ int capsck_isfinished(capsck_t *capsck)
     return capsck->gotlfin && capsck->gotrfin && capsck->lastlack > capsck->lfinseq && capsck->lastrack > capsck->rfinseq;
 }
 
+void capsck_parsepacket(capsck_t* capsck, const struct pcap_pkthdr* pkthdr, const u_char* packet, sequence_event_t* event_data)
+{    
+    ip_header* ih;
+    tcp_header* th;
+    u_int ip_len;
+    u_int orfw;
+    u_short sport;
+    u_short dport;
+    u_int absseqno;
+    u_int absackno;
+    u_int relseqno;
+    u_int relackno;
+    u_short datalen = 0;
+    u_int tcp_len = 0;
+    int islpkt = 0;
+    int gotlack = 0;
+    int gotlseq = 0;
 
-void capsck_callback(u_char *user,const struct pcap_pkthdr* pkthdr,const u_char*
-        packet)
+    bzero(event_data, sizeof(sequence_event_t));
+
+    ih = (ip_header*)(packet + 14);
+    ip_len = (ih->ver_ihl & 0xf) * 4;
+    th = (tcp_header*)((u_char*)ih + ip_len);
+
+    orfw = htonl(th->offset_reserved_flags_window);
+
+    sport = htons(th->sport);
+    dport = htons(th->dport);
+
+    absseqno = htonl(th->seq_number);
+    absackno = htonl(th->ack_number);
+
+    tcp_len = ((orfw & 0xf0000000) >> 28) * 4;
+    datalen = ntohs(ih->tlen) - tcp_len - ip_len;
+
+    if (orfw & SYNFLAG)
+        datalen++;
+    if (orfw & FINFLAG)
+        datalen++;
+
+    if (!capsck->gotorigpkt) {
+        memcpy(&capsck->laddr, &ih->saddr, sizeof(struct in_addr));
+        memcpy(&capsck->raddr, &ih->daddr, sizeof(struct in_addr));
+        capsck->lport = htons(th->sport);
+        capsck->rport = htons(th->dport);
+        capsck->lseqorig = absseqno - 1;
+        capsck->rseqorig = absackno - 1;
+        memcpy(&capsck->origtime, &pkthdr->ts, sizeof(struct timeval));
+        capsck->gotorigpkt = 1;
+        islpkt = 1;
+    }
+    else  if (!memcmp(&capsck->laddr, &ih->saddr, sizeof(struct in_addr)) && sport == capsck->lport) {
+        islpkt = 1;
+    }
+    
+    capsck->lastpktislocal = islpkt;
+
+
+    relseqno = relseq(capsck, absseqno, islpkt);
+    relackno = relseq(capsck, absackno, !islpkt);
+
+    if (islpkt) {
+        if (absseqno > capsck->lastlseq) {
+            capsck->lastlseq = absseqno;
+            gotlseq = 1;
+        }
+        if (absackno > capsck->lastrack) {
+            capsck->lastrack = absackno;
+        }
+    }
+    else {
+        if (absseqno > capsck->lastrseq) {
+            capsck->lastrseq = absseqno;
+        }
+        if (absackno > capsck->lastlack) {
+            capsck->lastlack = absackno;
+            memcpy(&capsck->lastacktime, &pkthdr->ts, sizeof(struct timeval));
+            gotlack = 1;
+        }
+    }
+
+    if (orfw & FINFLAG) {
+        if (islpkt) {
+            capsck->gotlfin = 1;
+            capsck->lfinseq = absseqno;
+        }
+        else {
+            capsck->gotrfin = 1;
+            capsck->rfinseq = absseqno;
+        }
+    }
+
+    if (gotlack) {
+        memcpy(&event_data->ts, &pkthdr->ts, sizeof(struct timeval));
+        event_data->is_local = 0;
+        event_data->seqno = relackno;
+        event_data->is_interesting = 1;
+    }
+    else if (islpkt && datalen > 0) {
+        memcpy(&event_data->ts, &pkthdr->ts, sizeof(struct timeval));
+        event_data->is_local = 1;
+        event_data->seqno = relseqno + datalen;
+        event_data->is_interesting = 1;
+    }
+}
+
+void capsck_callback(u_char *user, const struct pcap_pkthdr *pkthdr, const u_char *packet)
 {
-  static int count = 1;
-  capsck_t *scd = (capsck_t *)user;
-  u_int ip_len;
-  u_int absseqno;
-  u_int absackno;
-  u_int relseqno;
-  u_int relackno;
-  u_short sport;
-  u_short dport;
-  char s_src[16];
-  char s_dst[16];
-  int islpkt = 0;
-  int gotlack = 0;
-  int gotlseq = 0;
-  u_short datalen = 0;
-  u_short ihl = 0;
-  u_int tcp_len = 0;
-  u_int orfw;
-  sequence_event_t cb_data;
-  capsck_cb_t cb = (capsck_cb_t)scd->cb;
+    sequence_event_t event_data;
+    capsck_t *capsck = (capsck_t *)user;
+    capsck_cb_t cb = (capsck_cb_t)capsck->cb;
 
+    capsck_parsepacket(capsck, pkthdr, packet, &event_data);
 
-  ip_header *ih;
-  tcp_header *th;
-  
-  ih = (ip_header *) (packet + 14);
-  ip_len = (ih->ver_ihl & 0xf) * 4;
-  th = (tcp_header *) ((u_char*)ih + ip_len);
-
-  orfw = htonl(th->offset_reserved_flags_window);
-
-  sport = htons(th->sport);
-  dport = htons(th->dport);
-
-  absseqno = htonl(th->seq_number);
-  absackno = htonl(th->ack_number);
-
-  tcp_len = ((orfw & 0xf0000000) >> 28) * 4;
-  datalen = ntohs(ih->tlen) - tcp_len - ip_len;
-
-  if (orfw & SYNFLAG) 
-    datalen++;
-  if (orfw & FINFLAG) 
-    datalen++;
-
-  if (!scd->gotorigpkt) {
-    memcpy(&scd->laddr, &ih->saddr, sizeof(struct in_addr));
-    memcpy(&scd->raddr, &ih->daddr, sizeof(struct in_addr));
-    scd->lport = htons(th->sport);
-    scd->rport = htons(th->dport);
-    scd->lseqorig = absseqno - 1;
-    scd->rseqorig = absackno - 1;
-    memcpy(&scd->origtime, &pkthdr->ts, sizeof(struct timeval));
-    scd->gotorigpkt = 1;
-    islpkt = 1;
-  } else  if (!memcmp(&scd->laddr, &ih->saddr, sizeof(struct in_addr)) && sport == scd->lport) {
-    islpkt = 1;
-  } else {
-    // printf("remote packet %s:%d vs %s %d\n", inet_ntoa(scd->laddr), scd->lport, inet_ntoa(ih->saddr), sport);
-    }
-
-  scd->lastpktislocal = islpkt;
-
-
-  relseqno = relseq(scd, absseqno, islpkt);
-  relackno = relseq(scd, absackno, !islpkt);
-
-/*
-  if (islpkt && scd->gotrfin && absackno > scd->lastrseq) {
-      printf("Got RFIN ACK: %d to %d\n", relackno, relseq(scd, scd->lastrseq, 0));
-  }
-
-  if (!islpkt && scd->gotlfin && absackno > scd->lastlseq) {
-      printf("Got LFIN ACK: %d to %d\n", relackno, relseq(scd, scd->lastlseq, 1));
-  }
-*/
-
-  if (islpkt) {
-    // printf("local packet ack %lu - %lu  = %lu\n", scd->rseqorig, absackno, relackno);
-    if (absseqno > scd->lastlseq) {
-        scd->lastlseq = absseqno;
-        // memcpy(&scd->lastseqtime, &pkthdr->ts, sizeof(struct timeval));
-        gotlseq = 1;
-        }
-    if (absackno > scd->lastrack) {
-        scd->lastrack = absackno;
-        }
-  } else {
-    if (absseqno > scd->lastrseq) {
-        scd->lastrseq = absseqno;
-        }
-    if (absackno > scd->lastlack) {
-        scd->lastlack = absackno;
-        memcpy(&scd->lastacktime, &pkthdr->ts, sizeof(struct timeval));
-        gotlack = 1;
-        }
-    }
-
-  if (orfw & FINFLAG) {
-      if (islpkt) {
-          scd->gotlfin = 1;
-          scd->lfinseq = absseqno;
-          // printf("Got LFIN: %d\n", relseqno);
-      }
-      else {
-          scd->gotrfin = 1;
-          scd->rfinseq = absseqno;
-          // printf("Got RFIN: %d\n", relseqno);
-      }
-  }
-
-  if (gotlack)
-    // printf("   ---> ACK: %lu.%.6lu: %8d\n", pkthdr->ts.tv_sec, pkthdr->ts.tv_usec, relackno);
-    if (scd->cb) {
-        memcpy(&cb_data.ts, &pkthdr->ts, sizeof(struct timeval));
-        cb_data.is_local = 0;
-        cb_data.seqno = relackno;
-        cb(scd, &cb_data);
-        }
-  if (islpkt && datalen > 0)
-    // printf("   <--- SEQ: %lu.%.6lu: %8d+%8d=%8d\n", pkthdr->ts.tv_sec, pkthdr->ts.tv_usec, relseqno, datalen, relseqno+datalen);
-    if (scd->cb) {
-        memcpy(&cb_data.ts, &pkthdr->ts, sizeof(struct timeval));
-        cb_data.is_local = 1;
-        cb_data.seqno = relseqno+datalen;
-        cb(scd, &cb_data);
-        }
-
-
-// ALL BELOW WILL BE USER CALLBACK SHORTLY
-
-  /* blasted static buffers! */
-  if (scd->lastpktislocal) {
-      strcpy(s_src, inet_ntoa(scd->laddr));
-      strcpy(s_dst, inet_ntoa(scd->raddr));
-  } else {
-      strcpy(s_src, inet_ntoa(scd->raddr));
-      strcpy(s_dst, inet_ntoa(scd->laddr));
-  }
-
-
-  // printf("%lu.%.6lu: %15s:%.5d -> %15s:%.5d SEQ %.8d ACK %.8d [%s]\n", scd->lastpkttime.tv_sec, scd->lastpkttime.tv_usec, s_src, htons(th->sport), s_dst, htons(th->dport), relseqno, relackno, capsck_flagstr(scd->last_orfw));
-
-  // printf("%lu.%.6lu: %15s:%.5d -> %15s:%.5d LEN %.5d SEQ %.8d ACK %.8d [%s]\n", pkthdr->ts.tv_sec, pkthdr->ts.tv_usec, s_src, htons(th->sport), s_dst, htons(th->dport), pkthdr->len, relseqno, relackno, capsck_flagstr(orfw));
-
+    if (event_data.is_interesting)
+        cb(capsck, &event_data);
 }
 
 void capsck_freeip4devs(pcap_if_t* f)
