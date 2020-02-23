@@ -264,6 +264,7 @@ sequence_event_t *capsck_next(capsck_t *capsck)
 
     static pcap_t **descr = NULL;
     struct pcap_pkthdr *pkthdr;
+    pcap_t *orig;
     const u_char* packet;
     static sequence_event_t ret;
     int result;
@@ -271,8 +272,19 @@ sequence_event_t *capsck_next(capsck_t *capsck)
     if (descr == NULL || *descr == NULL)
       descr = capsck->caps;
 
-    result = pcap_next_ex(*descr, &pkthdr, &packet);
-    switch (result) {
+    // if (descr == NULL || *descr == NULL)
+        // this would be a good error check
+        // here and in any function that uses a capsck_t.
+        // error check function, perhaps?
+
+    orig = *descr;
+
+    // Since we're not relying on an "any" interface, we go once around the 
+    // circle of interfaces and stop if we find something interesting
+
+    do {
+        result = pcap_next_ex(*descr, &pkthdr, &packet);
+        switch (result) {
         case 0: // timeout expired
             ret.is_interesting = 0;
             break;
@@ -282,8 +294,11 @@ sequence_event_t *capsck_next(capsck_t *capsck)
         case PCAP_ERROR: // got an error
             ret.is_error = 1;
             break;
-    }
-    descr++;
+        }
+        descr++;
+        if (*descr == NULL)
+            descr = capsck->caps;
+    } while (*descr != orig && !ret.is_interesting);
     return &ret;
 }
 
