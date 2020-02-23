@@ -120,13 +120,6 @@ u_int relseq(capsck_t *capsck, u_int absseq, int islseq)
 
 int capsck_isfinished(capsck_t *capsck)
 {
-    // int ret = capsck->gotlfinack && capsck->gotrfinack;
-    // return ret;
-
-    // sleep(1);
-
-    // printf(" {{ %d/%d %u > %u, %u > %u }}\n", capsck->gotlfin , capsck->gotrfin , relseq(capsck, capsck->lastlack, 1) , relseq(capsck, capsck->lfinseq, 1) , relseq(capsck, capsck->lastrack, 0) , relseq(capsck, capsck->rfinseq,0));
-
     return capsck->gotlfin && capsck->gotrfin && capsck->lastlack > capsck->lfinseq && capsck->lastrack > capsck->rfinseq;
 }
 
@@ -248,6 +241,8 @@ void capsck_callback(u_char *user, const struct pcap_pkthdr *pkthdr, const u_cha
         cb(capsck, &event_data);
 }
 
+
+
 void capsck_freeip4devs(pcap_if_t* f)
 {
     pcap_if_t *n;
@@ -260,13 +255,17 @@ void capsck_freeip4devs(pcap_if_t* f)
 }
 
 capsck_t *capsck_openallinterfaces(char *filter, char* errbuf)
-//TODO: clean up memory allocations in this function
+// Why not check the routing table and pick the interface based on that you ask?  INBOUND packets are not
+// bound to the rules of OUR routing table, they can come from literally anywhere.  Also, that sounds like
+// a lot more work.
+
+// Why not open "any" interface?  Because code may run on Windows, which doesn't have one.
+
 //cleanup after this function does not require anything special because I did an array/pointer instead of a linked list
 // You can just free() it
 {
     pcap_addr_t *a;
     pcap_if_t *alldevs;
-    // pcap_if_t *ipv4devs;
     pcap_if_t *d;
     pcap_if_t *m = NULL;
     pcap_if_t *f = NULL;
@@ -277,7 +276,6 @@ capsck_t *capsck_openallinterfaces(char *filter, char* errbuf)
     pcap_t **descr;
     struct bpf_program fp;
     capsck_t *ret;
-
 
     if (pcap_findalldevs(&alldevs, errbuf) == -1)
         return NULL;
@@ -291,8 +289,6 @@ capsck_t *capsck_openallinterfaces(char *filter, char* errbuf)
         if (! has_ipv4_addr) {
             continue;
             }
-
-        // printf("  Interface %s has ipv4.  Adding to list of interfaces to capture on.\n", d->name);
 
         p = m;
         m = (pcap_if_t *)malloc(sizeof(pcap_if_t));
@@ -437,17 +433,6 @@ capsck_t *capsck_create(int sck, char* errbuf, capsck_cb_t cb)
         return NULL;
         }
 
-    // to make this work on windows it may be necessary to get an interface list with pcap_findalldevs_ex()
-    // and pcap_open_live all interfaces, unless "any" is present (at which point we know it's linux)
-    // Why not check the routing table and pick the interface based on that you ask?  INBOUND packets are not
-    // bound to the rules of OUR routing table, they can come from literally anywhere.  Also, that sounds like
-    // a lot more work.
-
-    /*
-    descr[0] = pcap_open_live("any", BUFSIZ, 0, -1,errbuf);
-    descr[1] = NULL;
-    */
-
 
     // inet_ntoa returns a static buffer so we can't just do this all at once 
     sprintf((char*)rsource, "src host %s and src port %d", 
@@ -490,12 +475,8 @@ capsck_t *capsck_create(int sck, char* errbuf, capsck_cb_t cb)
 void capsck_dispatch(capsck_t *capsck)
 {
     pcap_t **descr;
-    // to make this work on windows it may be necessary to pcap_dispatch() the entire list of interfaces.
-    // See comments above next to pcap_open_live()
 
     descr = capsck->caps;
-
-    // printf("dispatch %p\n", descr);
 
     while(*descr) {
         pcap_dispatch(*descr, -1, capsck_callback, (u_char *)capsck);
