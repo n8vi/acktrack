@@ -59,6 +59,7 @@ typedef struct sequence_event {
     u_char is_local;
     u_int seqno;
     u_char is_interesting;
+    u_char is_error;
 } sequence_event_t;
 
 /* The following struct may be subject to change */
@@ -92,3 +93,12 @@ extern "C" PCAPSOCKET_API void capsck_free(capsck_t *capsck);
 extern "C" PCAPSOCKET_API int capsck_isfinished(capsck_t *capsck);
 extern "C" PCAPSOCKET_API capsck_t *capsck_create(int sck, char* errbuf, capsck_cb_t cb);
 extern "C" PCAPSOCKET_API void capsck_dispatch(capsck_t *capsck);
+extern "C" PCAPSOCKET_API sequence_event_t * capsck_next(capsck_t * capsck);
+
+extern "C" PCAPSOCKET_API long capsck_se_ts_sec(sequence_event_t se);
+extern "C" PCAPSOCKET_API long capsck_se_ts_usec(sequence_event_t se);
+extern "C" PCAPSOCKET_API u_char capsck_se_is_local(sequence_event_t se);
+extern "C" PCAPSOCKET_API u_int capsck_se_seqno(sequence_event_t se);
+extern "C" PCAPSOCKET_API u_char capsck_se_is_interesting(sequence_event_t se);
+extern "C" PCAPSOCKET_API u_char capsck_se_is_error(sequence_event_t se);
+

@@ -229,10 +229,10 @@ void capsck_parsepacket(capsck_t* capsck, const struct pcap_pkthdr* pkthdr, cons
     }
 }
 
-void capsck_callback(u_char *user, const struct pcap_pkthdr *pkthdr, const u_char *packet)
+void capsck_callback(u_char* user, const struct pcap_pkthdr* pkthdr, const u_char* packet)
 {
     sequence_event_t event_data;
-    capsck_t *capsck = (capsck_t *)user;
+    capsck_t* capsck = (capsck_t*)user;
     capsck_cb_t cb = (capsck_cb_t)capsck->cb;
 
     capsck_parsepacket(capsck, pkthdr, packet, &event_data);
@@ -241,11 +241,9 @@ void capsck_callback(u_char *user, const struct pcap_pkthdr *pkthdr, const u_cha
         cb(capsck, &event_data);
 }
 
-
-
 void capsck_freeip4devs(pcap_if_t* f)
 {
-    pcap_if_t *n;
+    pcap_if_t* n;
 
     while (f) {
         n = f->next;
@@ -253,6 +251,55 @@ void capsck_freeip4devs(pcap_if_t* f)
         f = n;
     }
 }
+
+sequence_event_t *capsck_next(capsck_t *capsck)
+{
+
+    // pcap_next_ex(pcap_t * p, struct pcap_pkthdr** pkt_header, const u_char * *pkt_data);
+    // pcap_next_ex() returns 1 if the packet was read without problems, 
+    // 0 if packets are being read from a live capture and the packet buffer timeout expired
+    // PCAP_ERROR if an error occurred while reading the packet
+    // and PCAP_ERROR_BREAK if packets are being read from a ``savefile''and there are no more packets to read from the savefile.
+    // If PCAP_ERROR is returned, pcap_geterr(3PCAP) or pcap_perror(3PCAP) may be called with p as an argument to fetch or display the error text.
+
+    static pcap_t **descr = NULL;
+    struct pcap_pkthdr *pkthdr;
+    const u_char* packet;
+    static sequence_event_t ret;
+    int result;
+
+    if (descr == NULL || *descr == NULL)
+      descr = capsck->caps;
+
+    result = pcap_next_ex(*descr, &pkthdr, &packet);
+    switch (result) {
+        case 0: // timeout expired
+            ret.is_interesting = 0;
+            break;
+        case 1: // Got a packet
+            capsck_parsepacket(capsck, pkthdr, packet, &ret);
+            break;
+        case PCAP_ERROR: // got an error
+            ret.is_error = 1;
+            break;
+    }
+    descr++;
+    return &ret;
+}
+
+void capsck_dispatch(capsck_t* capsck)
+{
+    pcap_t** descr;
+
+    descr = capsck->caps;
+
+    while (*descr) {
+        pcap_dispatch(*descr, -1, capsck_callback, (u_char*)capsck);
+        descr++;
+    }
+}
+
+
 
 capsck_t *capsck_openallinterfaces(char *filter, char* errbuf)
 // Why not check the routing table and pick the interface based on that you ask?  INBOUND packets are not
@@ -332,6 +379,9 @@ capsck_t *capsck_openallinterfaces(char *filter, char* errbuf)
             free(descr);
             return NULL;
         }
+
+        pcap_set_timeout(descr[i], 1);
+        // return value?
 
         i++;
         }
@@ -472,14 +522,43 @@ capsck_t *capsck_create(int sck, char* errbuf, capsck_cb_t cb)
     return ret;
 }
 
-void capsck_dispatch(capsck_t *capsck)
+
+/*
+typedef struct sequence_event {
+    struct timeval ts;
+    u_char is_local;
+    u_int seqno;
+    u_char is_interesting;
+    u_char is_error;
+} sequence_event_t;
+*/
+
+long capsck_se_ts_sec(sequence_event_t *se)
 {
-    pcap_t **descr;
+    return se->ts.tv_sec;
+}
 
-    descr = capsck->caps;
+long capsck_se_ts_usec(sequence_event_t *se)
+{
+    return se->ts.tv_usec;
+}
 
-    while(*descr) {
-        pcap_dispatch(*descr, -1, capsck_callback, (u_char *)capsck);
-        descr++;
-        }
+u_char capsck_se_is_local(sequence_event_t *se)
+{
+    return se->is_local;
+}
+
+u_int capsck_se_seqno(sequence_event_t *se)
+{
+    return se->seqno;
+}
+
+u_char capsck_se_is_interesting(sequence_event_t *se)
+{
+    return se->is_interesting;
+}
+
+u_char capsck_se_is_error(sequence_event_t *se)
+{
+    return se->is_error;
 }
