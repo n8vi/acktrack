@@ -32,8 +32,6 @@ int main(int argc, char* argv[])
 #endif
 
     int portno, n; // , ret;
-
-    char errbuf[PCAP_ERRBUF_SIZE];
     struct sockaddr_in serv_addr;
     struct hostent* server;
     capsck_t* capsck;
@@ -80,13 +78,13 @@ int main(int argc, char* argv[])
     if (connect(sockfd, (struct sockaddr*) & serv_addr, sizeof(serv_addr)) < 0)
         error((char*)"ERROR connecting");
 
-    capsck = capsck_create(sockfd, errbuf, mycallback);
+    capsck = capsck_create(sockfd);
 
     printf("connected ... \n");
     // sleep (5);
 
     if (capsck == NULL) {
-        fprintf(stderr, "%s\n", errbuf);
+        fprintf(stderr, "capsck_create() failed.\n");
         exit(0);
     }
 
@@ -103,19 +101,19 @@ int main(int argc, char* argv[])
         if (n < 0)
             error((char*)"ERROR reading from socket");
         if (n > 0) {
-            capsck_dispatch(capsck);
+            capsck_dispatch(capsck, mycallback);
             // printf("read %d octets\n", n);
         }
         if (n == 0) {
             printf("Connection closed\n");
-            capsck_dispatch(capsck);
+            capsck_dispatch(capsck, mycallback);
 #ifdef WIN32
             closesocket(sockfd);
 #else
             close(sockfd);
 #endif
             while (!capsck_isfinished(capsck))
-                capsck_dispatch(capsck);
+                capsck_dispatch(capsck, mycallback);
             return 0;
         }
         i++;

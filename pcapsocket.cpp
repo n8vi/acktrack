@@ -302,9 +302,11 @@ sequence_event_t *capsck_next(capsck_t *capsck)
     return &ret;
 }
 
-void capsck_dispatch(capsck_t* capsck)
+void capsck_dispatch(capsck_t* capsck, capsck_cb_t cb)
 {
     pcap_t** descr;
+
+    capsck->cb = cb;
 
     descr = capsck->caps;
 
@@ -314,9 +316,7 @@ void capsck_dispatch(capsck_t* capsck)
     }
 }
 
-
-
-capsck_t *capsck_openallinterfaces(char *filter, char* errbuf)
+capsck_t *capsck_openallinterfaces(char *filter)
 // Why not check the routing table and pick the interface based on that you ask?  INBOUND packets are not
 // bound to the rules of OUR routing table, they can come from literally anywhere.  Also, that sounds like
 // a lot more work.
@@ -338,6 +338,7 @@ capsck_t *capsck_openallinterfaces(char *filter, char* errbuf)
     pcap_t **descr;
     struct bpf_program fp;
     capsck_t *ret;
+    char errbuf[PCAP_ERRBUF_SIZE];
 
     if (pcap_findalldevs(&alldevs, errbuf) == -1)
         return NULL;
@@ -414,8 +415,8 @@ capsck_t *capsck_openallinterfaces(char *filter, char* errbuf)
     return(ret);
 
 }
-    
-capsck_t *capsck_create(int sck, char* errbuf, capsck_cb_t cb)
+
+capsck_t *capsck_create(int sck) // no errbuf
 {
     struct sockaddr_in laddr;
     struct sockaddr_in raddr;
@@ -443,6 +444,7 @@ capsck_t *capsck_create(int sck, char* errbuf, capsck_cb_t cb)
     r = getsockopt(sck, SOL_SOCKET, SO_TYPE, (char*)&type, &typelen);
 
     if (r == -1) {
+        /*
         if (errno == ENOTCONN)
             // Gotta connect before trying this, or we don't have two endpoints to bind to
             strcpy(errbuf, "Socket isn't connected");
@@ -451,12 +453,12 @@ capsck_t *capsck_create(int sck, char* errbuf, capsck_cb_t cb)
             strcpy(errbuf, "Bad socket descriptor");
         else
             strcpy(errbuf, "Unknown error getting socket type");
-
+        */
         return NULL;
     }
 
     if (type != SOCK_STREAM) {
-        strcpy(errbuf, "Socket is not TCP");
+        // strcpy(errbuf, "Socket is not TCP");
         return NULL;
     }
 
@@ -465,6 +467,7 @@ capsck_t *capsck_create(int sck, char* errbuf, capsck_cb_t cb)
     r = getpeername(sck, (struct sockaddr*)&raddr, &len);
 
     if (r == -1) {
+        /*
         if (errno == ENOTCONN)
             // Gotta connect before trying this, or we don't have two endpoints to bind to
             strcpy(errbuf, "Socket isn't connected");
@@ -473,18 +476,19 @@ capsck_t *capsck_create(int sck, char* errbuf, capsck_cb_t cb)
             strcpy(errbuf, "Bad socket descriptor");
         else
             strcpy(errbuf, "Unknown error getting remote endpoint");
-
+        */
         return NULL;
         }
 
     if (raddr.sin_family != AF_INET) {
-        strcpy(errbuf, "Socket is not ipv4");
+        // strcpy(errbuf, "Socket is not ipv4");
         return NULL;
     }
 
     r = getsockname(sck, (struct sockaddr*)&laddr, &len);
 
     if (r == -1) {
+        /*
         // the first two errors here should have been caught above on the remote end, but just in case ...
         if (errno == ENOTCONN)
             // Gotta connect before trying this, or we don't have two endpoints to bind to
@@ -494,7 +498,7 @@ capsck_t *capsck_create(int sck, char* errbuf, capsck_cb_t cb)
             strcpy(errbuf, "Bad socket descriptor");
         else
             strcpy(errbuf, "Unknown error getting local endpoint");
-
+        */
         return NULL;
         }
 
@@ -524,7 +528,7 @@ capsck_t *capsck_create(int sck, char* errbuf, capsck_cb_t cb)
 
     // printf("PCAP filter = %s\n", filter);
 
-    ret = capsck_openallinterfaces((char *)filter, errbuf);
+    ret = capsck_openallinterfaces((char *)filter);
 
     if (ret == NULL)
     {
@@ -532,7 +536,6 @@ capsck_t *capsck_create(int sck, char* errbuf, capsck_cb_t cb)
         return ret;
     }
 
-    ret->cb = cb;
 
     return ret;
 }

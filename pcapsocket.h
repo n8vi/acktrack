@@ -91,8 +91,8 @@ typedef void (*capsck_cb_t)(capsck_t*, sequence_event_t *);
 
 extern "C" PCAPSOCKET_API void capsck_free(capsck_t *capsck);
 extern "C" PCAPSOCKET_API int capsck_isfinished(capsck_t *capsck);
-extern "C" PCAPSOCKET_API capsck_t *capsck_create(int sck, char* errbuf, capsck_cb_t cb);
-extern "C" PCAPSOCKET_API void capsck_dispatch(capsck_t *capsck);
+extern "C" PCAPSOCKET_API capsck_t *capsck_create(int sck); /* error reporting some other way */
+extern "C" PCAPSOCKET_API void capsck_dispatch(capsck_t *capsck, capsck_cb_t cb);
 extern "C" PCAPSOCKET_API sequence_event_t * capsck_next(capsck_t * capsck);
 
 extern "C" PCAPSOCKET_API long capsck_se_ts_sec(sequence_event_t se);
