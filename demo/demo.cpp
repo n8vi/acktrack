@@ -11,13 +11,15 @@ void error(char* msg)
 }
 
 
-void mycallback(capsck_t* cs, sequence_event_t* se)
+void printpkt(sequence_event_t* se)
 {
-    if (se->is_local) {
-        printf("  <-- SEQ %lu.%lu: %d\n", se->ts.tv_sec, se->ts.tv_usec, se->seqno);
-    }
-    else {
-        printf("  --> ACK %lu.%lu: %d\n", se->ts.tv_sec, se->ts.tv_usec, se->seqno);
+    if (se->is_interesting) {
+        if (se->is_local) {
+            printf("  <-- SEQ %lu.%lu: %d\n", se->ts.tv_sec, se->ts.tv_usec, se->seqno);
+        }
+        else {
+            printf("  --> ACK %lu.%lu: %d\n", se->ts.tv_sec, se->ts.tv_usec, se->seqno);
+        }
     }
 }
 
@@ -93,27 +95,27 @@ int main(int argc, char* argv[])
     if (n < 0)
         error((char*)"ERROR writing to socket");
 
-
-    // Perhaps in a thread?
     while (1) {
-        // n = read(sockfd, buffer, 255);
         n = recv(sockfd, buffer, sizeof(buffer) - 1, 0);
         if (n < 0)
             error((char*)"ERROR reading from socket");
         if (n > 0) {
-            capsck_dispatch(capsck, mycallback);
+            // capsck_dispatch(capsck, mycallback);
+            printpkt(capsck_next(capsck));            
             // printf("read %d octets\n", n);
         }
         if (n == 0) {
             printf("Connection closed\n");
-            capsck_dispatch(capsck, mycallback);
+            // capsck_dispatch(capsck, mycallback);
+            printpkt(capsck_next(capsck));
 #ifdef WIN32
             closesocket(sockfd);
 #else
             close(sockfd);
 #endif
             while (!capsck_isfinished(capsck))
-                capsck_dispatch(capsck, mycallback);
+                // capsck_dispatch(capsck, mycallback);
+                printpkt(capsck_next(capsck));
             return 0;
         }
         i++;
