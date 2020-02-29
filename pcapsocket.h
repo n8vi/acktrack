@@ -76,6 +76,7 @@ typedef struct capsck_t{
     struct timeval lastsenttime; /* time we sent the last SEQ to the remote */
     u_char gotrfin;                 /* nonzero if we've received a FIN from the remote */
     u_char gotlfin;                 /* nonzero if we've sent a FIN */
+    u_char gotrst;                  /* nonzero if an RST has been seen from either side */
     u_int lastrseq;                /* the last sequence number from the remote */
     u_int lastlseq;                /* our last sequence number */
     u_int lastrack;                /* the last ack we sent to the remote */
@@ -85,20 +86,27 @@ typedef struct capsck_t{
     pcap_t **caps;               /* an array of pcap handles of all nterfaces with ipv4 on them */
     u_char lastpktislocal;          /* nonzero if last packet seen was sent by us */
     void *cb;
+#ifdef _DEBUG
+    FILE* fp;
+#endif
 }capsck_t;
 
 typedef void (*capsck_cb_t)(capsck_t*, sequence_event_t *);
 
-extern "C" PCAPSOCKET_API void capsck_free(capsck_t *capsck);
-extern "C" PCAPSOCKET_API int capsck_isfinished(capsck_t *capsck);
-extern "C" PCAPSOCKET_API capsck_t *capsck_create(int sck); /* error reporting some other way */
-extern "C" PCAPSOCKET_API void capsck_dispatch(capsck_t *capsck, capsck_cb_t cb);
-extern "C" PCAPSOCKET_API sequence_event_t * capsck_next(capsck_t * capsck);
+extern "C" PCAPSOCKET_API void _cdecl capsck_free(capsck_t *capsck);
+extern "C" PCAPSOCKET_API int _cdecl capsck_isfinished(capsck_t *capsck);
+extern "C" PCAPSOCKET_API capsck_t * _cdecl capsck_create(int sck);
+extern "C" PCAPSOCKET_API void _cdecl capsck_dispatch(capsck_t * capsck, capsck_cb_t cb);
 
-extern "C" PCAPSOCKET_API long capsck_se_ts_sec(sequence_event_t se);
-extern "C" PCAPSOCKET_API long capsck_se_ts_usec(sequence_event_t se);
-extern "C" PCAPSOCKET_API u_char capsck_se_is_local(sequence_event_t se);
-extern "C" PCAPSOCKET_API u_int capsck_se_seqno(sequence_event_t se);
-extern "C" PCAPSOCKET_API u_char capsck_se_is_interesting(sequence_event_t se);
-extern "C" PCAPSOCKET_API u_char capsck_se_is_error(sequence_event_t se);
+// For VB ...
+// Public Declare Ansi Function capsck_create_fromstrings Lib "pcapsocket.dll" Alias "capsck_create_fromstrings" (ByVal LocalEndPointStr As String, ByVal RemoteEndPointStr As String) As IntPtr
+// cs = capsck_create_fromstrings(socket.LocalEndPoint.ToString(), socket.RemoteEndPoint.ToString());
+extern "C" PCAPSOCKET_API capsck_t * _cdecl capsck_create_fromstrings(char* LocalEndPointStr, char* RemoteEndPointStr);
+extern "C" PCAPSOCKET_API sequence_event_t * _cdecl capsck_next(capsck_t * capsck);
+extern "C" PCAPSOCKET_API long _cdecl capsck_se_ts_sec(sequence_event_t *se);
+extern "C" PCAPSOCKET_API long _cdecl capsck_se_ts_usec(sequence_event_t *se);
+extern "C" PCAPSOCKET_API u_int _cdecl capsck_se_is_local(sequence_event_t *se);
+extern "C" PCAPSOCKET_API u_int _cdecl capsck_se_seqno(sequence_event_t *se);
+extern "C" PCAPSOCKET_API u_int _cdecl capsck_se_is_interesting(sequence_event_t *se);
+extern "C" PCAPSOCKET_API u_int _cdecl capsck_se_is_error(sequence_event_t *se);
 

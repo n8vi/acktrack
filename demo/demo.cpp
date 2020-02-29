@@ -13,12 +13,12 @@ void error(char* msg)
 
 void printpkt(sequence_event_t* se)
 {
-    if (se->is_interesting) {
-        if (se->is_local) {
-            printf("  <-- SEQ %lu.%lu: %d\n", se->ts.tv_sec, se->ts.tv_usec, se->seqno);
+    if (capsck_se_is_interesting(se)) {
+        if (capsck_se_is_local(se)) {
+            printf("  <-- SEQ %lu.%lu: %d\n", capsck_se_ts_sec(se), capsck_se_ts_usec(se), capsck_se_seqno(se));
         }
         else {
-            printf("  --> ACK %lu.%lu: %d\n", se->ts.tv_sec, se->ts.tv_usec, se->seqno);
+            printf("  --> ACK %lu.%lu: %d\n", capsck_se_ts_sec(se), capsck_se_ts_usec(se), capsck_se_seqno(se));
         }
     }
 }
