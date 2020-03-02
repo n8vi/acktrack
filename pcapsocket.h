@@ -12,13 +12,13 @@
 
 #pragma once
 
-#ifdef WIN32
+// #ifdef _WIN32
 #ifdef PCAPSOCKET_EXPORTS
 #define PCAPSOCKET_API __declspec(dllexport)
 #else
 #define PCAPSOCKET_API __declspec(dllimport)
 #endif
-#endif
+// #endif
 
 #include <stdlib.h>
 #include <string.h>
@@ -27,7 +27,7 @@
 #include <errno.h>
 #include "pcap.h"
 
-#ifndef WIN32
+#ifndef _WIN32
 #include <unistd.h>
 #include <sys/socket.h>
 #include <netinet/in.h>
@@ -47,7 +47,7 @@
 #define PCAP_NETMASK_UNKNOWN 0xffffffff
 #endif
 
-#ifdef WIN32
+#ifdef _WIN32
 #define bzero(b,len) (memset((b), '\0', (len)), (void) 0)
 #define bcopy(b1,b2,len) (memmove((b2), (b1), (len)), (void) 0)
 #define sleep(x) Sleep((x*1000))
