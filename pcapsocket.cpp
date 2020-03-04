@@ -18,6 +18,11 @@
 #endif WIN32
 #include "pcapsocket.h"
 
+#define logmsg(fmt, ...) if (fp) fprintf(fp, fmt, ##__VA_ARGS__)
+// #define logmsg(...) if (fp) fprintf(fp, __VA_ARGS__)
+
+static FILE* fp = 0;
+
 /* 4 bytes IP address */
 typedef struct ip_address{
     u_char byte1;
@@ -105,10 +110,10 @@ char* _cdecl capsck_flagstr(u_int flags)
 void _cdecl capsck_free(capsck_t* capsck)
 {
     if (capsck) {
+        if (fp)
+            logmsg("Closing CAPSCK\n");
         if (capsck->caps)
             free(capsck->caps);
-        if (capsck->fp)
-            fclose(capsck->fp);
         free(capsck);
     }
 }
@@ -123,12 +128,34 @@ u_int relseq(capsck_t *capsck, u_int absseq, int islseq)
     return absseq;
 }
 
+int _cdecl capsck_openlog(char* logfile)
+{
+    fp = fopen(logfile, "w");
+    if (fp == NULL)
+        return 0;
+    else
+        logmsg("log file opened\n");
+        return 1;
+}
+
+void _cdecl capsck_writelog(char* msg)
+{
+    if (fp)
+        logmsg("APP: %s\n", msg);
+}
+
+void _cdecl capsck_closelog(void)
+{
+    if (fp)
+        fclose(fp);
+}
+
 int _cdecl capsck_isfinished(capsck_t *capsck)
 {
     if (!capsck)
         return NULL;
     int ret = (capsck->gotlfin && capsck->gotrfin && capsck->lastlack > capsck->lfinseq&& capsck->lastrack > capsck->rfinseq) || capsck->gotrst;
-    // printf("%d%d%d%d%d = %d\n", capsck->gotlfin, capsck->gotrfin, capsck->lastlack > capsck->lfinseq, capsck->lastrack > capsck->rfinseq, capsck->gotrst, ret);
+    logmsg("capsck_isfinished: %d%d%d%d%d = %d\n", capsck->gotlfin, capsck->gotrfin, capsck->lastlack > capsck->lfinseq, capsck->lastrack > capsck->rfinseq, capsck->gotrst, ret);
     return ret;
 }
 
@@ -172,7 +199,11 @@ void _cdecl capsck_parsepacket(capsck_t* capsck, const struct pcap_pkthdr* pkthd
     if (orfw & FINFLAG)
         datalen++;
 
+    logmsg("capsck_parsepacket(): %s:%d -> ", inet_ntoa(ih->saddr), ntohs(th->sport));
+    logmsg("%s:%d.\n", inet_ntoa(ih->daddr), ntohs(th->dport));
+
     if (!capsck->gotorigpkt) {
+        logmsg("   --> Original packet.  Source deemed local.\n");
         memcpy(&capsck->laddr, &ih->saddr, sizeof(struct in_addr));
         memcpy(&capsck->raddr, &ih->daddr, sizeof(struct in_addr));
         capsck->lport = htons(th->sport);
@@ -240,6 +271,8 @@ void _cdecl capsck_parsepacket(capsck_t* capsck, const struct pcap_pkthdr* pkthd
         event_data->seqno = relseqno + datalen;
         event_data->is_interesting = 1;
     }
+    logmsg("   --> is_local=%d seqno=%d is_interesting=%d\n", event_data->is_local, event_data->seqno, event_data->is_interesting);
+
 }
 
 void _cdecl capsck_callback(u_char* user, const struct pcap_pkthdr* pkthdr, const u_char* packet)
@@ -283,12 +316,14 @@ sequence_event_t *capsck_next(capsck_t *capsck)
     int result;
 
 
-    if (capsck == NULL)
+    if (capsck == NULL) {
+        logmsg("CAPSCK_NEXT CALLED ON NULL CAPSCK\n");
         return NULL;
+    }
 
     if (capsck->curcap == NULL || *capsck->curcap == NULL)
-      capsck->curcap = capsck->caps;
-
+        capsck->curcap = capsck->caps;
+  
 
     orig = *capsck->curcap;
 
@@ -299,12 +334,15 @@ sequence_event_t *capsck_next(capsck_t *capsck)
         result = pcap_next_ex(*capsck->curcap, &pkthdr, &packet);
         switch (result) {
         case 0: // timeout expired
+            logmsg("CAPSCK_NEXT: timeout expired\n");
             ret.is_interesting = 0;
             break;
         case 1: // Got a packet
+            logmsg("CAPSCK_NEXT: GOT A PACKET\n");
             capsck_parsepacket(capsck, pkthdr, packet, &ret);
             break;
         case PCAP_ERROR: // got an error
+            logmsg("CAPSCK_NEXT: GOT AN ERROR\n");
             ret.is_error = 1;
             ret.is_interesting = 0;
             break;
@@ -313,6 +351,7 @@ sequence_event_t *capsck_next(capsck_t *capsck)
         if (*capsck->curcap == NULL)
             capsck->curcap = capsck->caps;
     } while (*capsck->curcap != orig && !ret.is_interesting);
+
     return &ret;
 }
 
@@ -433,7 +472,7 @@ capsck_t *capsck_openallinterfaces(char *filter)
 }
 
 
-char* capsck_error()
+char* _cdecl capsck_error(void)
 {
 #ifdef _WIN32
     char * buf;
@@ -457,10 +496,6 @@ capsck_t* _cdecl capsck_create_fromstrings(char* LocalEndPointStr, char* RemoteE
     char* rportstr;
     const char filter[201] = "";
     capsck_t* ret;
-    FILE* fp;
-
-    fp = fopen("C:\\Users\\Public\\Documents\\capsck.txt", "w");
-
 
     if (strlen(LocalEndPointStr) > 21 || strlen(RemoteEndPointStr) > 21) {
         return NULL;
@@ -482,11 +517,9 @@ capsck_t* _cdecl capsck_create_fromstrings(char* LocalEndPointStr, char* RemoteE
 
     if (ret == NULL)
     {
-        fprintf(fp, "capsck_openallinterfaces failed");
+        logmsg("capsck_openallinterfaces failed");
         return ret;
     }
-
-    ret->fp = fp;
 
     return ret;
 }
@@ -505,7 +538,6 @@ capsck_t *capsck_create(int sck) // no errbuf
     int type;
     int typelen = sizeof(type);
     const char filter[201] = "";
-    FILE* fp;
 
 /**************************************************************************************[ maximum possible filter size ]****************************************************************************************\
                                                                                                        1         1         1         1         1         1         1         1         1         1         2
@@ -515,7 +547,6 @@ capsck_t *capsck_create(int sck) // no errbuf
                                                                                                                                                                                                       _____/
                                                                                                                                                                                      (null terminator)
 \**************************************************************************************************************************************************************************************************************/
-    fp = fopen("C:\\Users\\Public\\Documents\\capsck.txt", "w");
 
     /*
     if (!fp) {
@@ -525,7 +556,7 @@ capsck_t *capsck_create(int sck) // no errbuf
     */
 
 
-    fprintf(fp, "Log file opened\n");
+    logmsg("Log file opened\n");
 
     r = getsockopt(sck, SOL_SOCKET, SO_TYPE, (char*)&type, &typelen);
 
@@ -534,20 +565,18 @@ capsck_t *capsck_create(int sck) // no errbuf
         
         if (errno == ENOTCONN)
             // Gotta connect before trying this, or we don't have two endpoints to bind to
-            fprintf(fp, "Socket isn't connected\n");
+            logmsg("Socket isn't connected\n");
         else if (errno == EBADF)
             // this integer not returned from socket(), or close() has been called on it
-            fprintf(fp, "Bad socket descriptor\n");
+            logmsg("Bad socket descriptor\n");
         else
-            fprintf(fp, "Determining socket type: %s\n", capsck_error());
+            logmsg("Determining socket type: %s\n", capsck_error());
         
-        fclose(fp);
         return NULL;
     }
 
     if (type != SOCK_STREAM) {
-        fprintf(fp, "Socket is not TCP");
-        fclose(fp);
+        logmsg("Socket is not TCP");
         return NULL;
     }
 
@@ -558,20 +587,18 @@ capsck_t *capsck_create(int sck) // no errbuf
     if (r == -1) {
         if (errno == ENOTCONN)
             // Gotta connect before trying this, or we don't have two endpoints to bind to
-            fprintf(fp, "Socket isn't connected\n");
+            logmsg("Socket isn't connected\n");
         else if (errno == EBADF)
             // this integer not returned from socket(), or close() has been called on it
-            fprintf(fp, "Bad socket descriptor\n");
+            logmsg("Bad socket descriptor\n");
         else
-            fprintf(fp, "Getting remote endpoint: %s\n", capsck_error());
+            logmsg("Getting remote endpoint: %s\n", capsck_error());
 
-        fclose(fp);
         return NULL;
         }
 
     if (raddr.sin_family != AF_INET) {
-        fprintf(fp, 
-            "Socket is not ipv4\n");
+        logmsg("Socket is not ipv4\n");
         return NULL;
     }
 
@@ -580,14 +607,13 @@ capsck_t *capsck_create(int sck) // no errbuf
     if (r == -1) {
         if (errno == ENOTCONN)
             // Gotta connect before trying this, or we don't have two endpoints to bind to
-            fprintf(fp, "Socket isn't connected\n");
+            logmsg("Socket isn't connected\n");
         else if (errno == EBADF)
             // this integer not returned from socket(), or close() has been called on it
-            fprintf(fp, "Bad socket descriptor\n");
+            logmsg("Bad socket descriptor\n");
         else
-            fprintf(fp, "Getting local endpoint: %s\n", capsck_error());
+            logmsg("Getting local endpoint: %s\n", capsck_error());
 
-        fclose(fp);
         return NULL;
         }
 
@@ -621,11 +647,9 @@ capsck_t *capsck_create(int sck) // no errbuf
 
     if (ret == NULL)
     {
-        fprintf(fp, "capsck_openallinterfaces failed");
+        logmsg("capsck_openallinterfaces failed");
         return ret;
     }
-
-    ret->fp = fp;
 
     return ret;
 }
@@ -643,15 +667,20 @@ typedef struct sequence_event {
 
 long _cdecl capsck_se_ts_sec(sequence_event_t *se)
 {
-    if (!se)
+    if (!se) {
+        if (fp)
+        printf("SEQUENCE_EVENT_TS_SEC CALLED ON NULL SEQUENCE_EVENT\n");
         return NULL;
+    }
     return se->ts.tv_sec;
 }
 
 long _cdecl capsck_se_ts_usec(sequence_event_t *se)
 {
-    if (!se)
+    if (!se) {
+        printf("SEQUENCE_EVENT_TS_USEC CALLED ON NULL SEQUENCE_EVENT\n");
         return NULL;
+    }
     return se->ts.tv_usec;
 }
 
@@ -662,15 +691,19 @@ u_int _cdecl capsck_se_is_local(sequence_event_t *se)
     // printf("...: %d\n", capsck_se_is_interesting(se));
     // printf("[%d]\n", se);
 
-    if (!se)
+    if (!se) {
+        printf("SEQUENCE_EVENT_IS_LOCAL CALLED ON NULL SEQUENCE_EVENT\n");
         return NULL;
+    }
     return se->is_local;
 }
 
 u_int _cdecl capsck_se_seqno(sequence_event_t *se)
 {
-    if (!se)
+    if (!se) {
+        printf("SEQUENCE_EVENT_SEQNO CALLED ON NULL SEQUENCE_EVENT\n");
         return NULL;
+    }
     return se->seqno;
 }
 
@@ -683,14 +716,18 @@ u_int _cdecl capsck_se_is_interesting(sequence_event_t *se)
         printf("NI");
     }
     */
-    if (!se)
+    if (!se) {
+        printf("SEQUENCE_EVENT_IS_INTERESTING CALLED ON NULL SEQUENCE_EVENT\n");
         return NULL;
+    }
     return se->is_interesting;
 }
 
 u_int _cdecl capsck_se_is_error(sequence_event_t *se)
 {
-    if (!se)
+    if (!se) {
+        printf("SEQUENCE_EVENT_IS_ERROR CALLED ON NULL SEQUENCE_EVENT\n");
         return NULL;
+    }
     return se->is_error;
 }

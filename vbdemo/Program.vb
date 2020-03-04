@@ -6,6 +6,24 @@ Imports System.Runtime.InteropServices
 
 Module Module1
 
+    'extern "C" PCAPSOCKET_API int  _cdecl capsck_openlog(char* logfile);
+    'extern "C" PCAPSOCKET_API void  _cdecl capsck_writelog(char* msg);
+    'extern "C" PCAPSOCKET_API void  _cdecl capsck_closelog(void);
+    'extern "C" PCAPSOCKET_API char* _cdecl capsck_error(void);
+
+    <DllImport("pcapsocket.dll", CallingConvention:=CallingConvention.Cdecl)>
+    Private Function capsck_openlog(ByVal logfile As String) As Boolean
+    End Function
+    <DllImport("pcapsocket.dll", CallingConvention:=CallingConvention.Cdecl)>
+    Private Function capsck_writelog(msg As String)
+    End Function
+    <DllImport("pcapsocket.dll", CallingConvention:=CallingConvention.Cdecl)>
+    Private Function capsck_closelog()
+    End Function
+    <DllImport("pcapsocket.dll", CallingConvention:=CallingConvention.Cdecl)>
+    Private Function capsck_error() As String
+    End Function
+
     <DllImport("pcapsocket.dll", CallingConvention:=CallingConvention.Cdecl)>
     Private Function capsck_create_fromstrings(ByVal LocalEndPointStr As String, ByVal RemoteEndPointStr As String) As IntPtr
     End Function
@@ -37,11 +55,14 @@ Module Module1
     ' string result = String.Format("{0,10:D6} {0,10:X8}", value);
 
     Sub printpkt(se As IntPtr)
-        If capsck_se_is_interesting(se) Then
-            If capsck_se_is_local(se) Then
-                Console.WriteLine(String.Format(" --> SEQ {0:D}.{1:D6} {2}", capsck_se_ts_sec(se), capsck_se_ts_usec(se), capsck_se_seqno(se)))
-            Else
-                Console.WriteLine(String.Format(" <-- ACK {0:D}.{1:D6} {2}", capsck_se_ts_sec(se), capsck_se_ts_usec(se), capsck_se_seqno(se)))
+        If (se) Then
+
+            If capsck_se_is_interesting(se) Then
+                If capsck_se_is_local(se) Then
+                    Console.WriteLine(String.Format(" --> SEQ {0:D}.{1:D6} {2}", capsck_se_ts_sec(se), capsck_se_ts_usec(se), capsck_se_seqno(se)))
+                Else
+                    Console.WriteLine(String.Format(" <-- ACK {0:D}.{1:D6} {2}", capsck_se_ts_sec(se), capsck_se_ts_usec(se), capsck_se_seqno(se)))
+                End If
             End If
         End If
     End Sub
@@ -58,6 +79,15 @@ Module Module1
         Dim se As IntPtr
         Dim utcnow = DateTime.UtcNow
         Dim span As TimeSpan
+        Dim ret As Integer
+
+        ret = capsck_openlog("C:\Users\Public\Documents\capsck.txt")
+
+        If Not ret Then
+            Console.Write("Error opening log C:\Users\Public\Documents\capsck.txt: ")
+            Console.WriteLine(capsck_error())
+        End If
+
 
         socket = createSocket(host, port)
 
@@ -83,8 +113,8 @@ Module Module1
         Else
             Console.WriteLine("Socket not connected.")
         End If
-        Console.WriteLine("Connection terminated.  Press key to exit.")
-        Console.ReadKey()
+        'Console.WriteLine("Connection terminated.  Press key to exit.")
+        'Console.ReadKey()
 
     End Sub
 

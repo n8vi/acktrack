@@ -87,9 +87,6 @@ typedef struct capsck_t{
     u_char lastpktislocal;          /* nonzero if last packet seen was sent by us */
     pcap_t** curcap;            /* current pcap_t handle used by capsck_next() */
     void *cb;
-#ifdef _DEBUG
-    FILE* fp;
-#endif
 }capsck_t;
 
 typedef void (*capsck_cb_t)(capsck_t*, sequence_event_t *);
@@ -98,6 +95,11 @@ extern "C" PCAPSOCKET_API void _cdecl capsck_free(capsck_t *capsck);
 extern "C" PCAPSOCKET_API int _cdecl capsck_isfinished(capsck_t *capsck);
 extern "C" PCAPSOCKET_API capsck_t * _cdecl capsck_create(int sck);
 extern "C" PCAPSOCKET_API void _cdecl capsck_dispatch(capsck_t * capsck, capsck_cb_t cb);
+
+extern "C" PCAPSOCKET_API int  _cdecl capsck_openlog(char* logfile);
+extern "C" PCAPSOCKET_API void  _cdecl capsck_writelog(char* msg);
+extern "C" PCAPSOCKET_API void  _cdecl capsck_closelog(void);
+extern "C" PCAPSOCKET_API char* _cdecl capsck_error(void);
 
 // For VB ...
 // Public Declare Ansi Function capsck_create_fromstrings Lib "pcapsocket.dll" Alias "capsck_create_fromstrings" (ByVal LocalEndPointStr As String, ByVal RemoteEndPointStr As String) As IntPtr
