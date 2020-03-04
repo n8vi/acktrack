@@ -85,6 +85,7 @@ typedef struct capsck_t{
     u_int rfinseq;                 /* the sequence number of the FIN from the remote if gotrfin */
     pcap_t **caps;               /* an array of pcap handles of all nterfaces with ipv4 on them */
     u_char lastpktislocal;          /* nonzero if last packet seen was sent by us */
+    pcap_t** curcap;            /* current pcap_t handle used by capsck_next() */
     void *cb;
 #ifdef _DEBUG
     FILE* fp;

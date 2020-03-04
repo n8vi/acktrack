@@ -102,11 +102,15 @@ char* _cdecl capsck_flagstr(u_int flags)
     return ret;
 }
 
-void _cdecl capsck_free(capsck_t *capsck)
+void _cdecl capsck_free(capsck_t* capsck)
 {
-    free(capsck->caps);
-    fclose(capsck->fp);
-    free(capsck);
+    if (capsck) {
+        if (capsck->caps)
+            free(capsck->caps);
+        if (capsck->fp)
+            fclose(capsck->fp);
+        free(capsck);
+    }
 }
 
 u_int relseq(capsck_t *capsck, u_int absseq, int islseq)
@@ -121,6 +125,8 @@ u_int relseq(capsck_t *capsck, u_int absseq, int islseq)
 
 int _cdecl capsck_isfinished(capsck_t *capsck)
 {
+    if (!capsck)
+        return NULL;
     int ret = (capsck->gotlfin && capsck->gotrfin && capsck->lastlack > capsck->lfinseq&& capsck->lastrack > capsck->rfinseq) || capsck->gotrst;
     // printf("%d%d%d%d%d = %d\n", capsck->gotlfin, capsck->gotrfin, capsck->lastlack > capsck->lfinseq, capsck->lastrack > capsck->rfinseq, capsck->gotrst, ret);
     return ret;
@@ -269,7 +275,7 @@ sequence_event_t *capsck_next(capsck_t *capsck)
     // and PCAP_ERROR_BREAK if packets are being read from a ``savefile''and there are no more packets to read from the savefile.
     // If PCAP_ERROR is returned, pcap_geterr(3PCAP) or pcap_perror(3PCAP) may be called with p as an argument to fetch or display the error text.
 
-    static pcap_t **descr = NULL;
+    // static pcap_t **descr = NULL; /* TODO: Move to capsck_t structure.  This breaks the ability to do multiple simultaneous captures.  */
     struct pcap_pkthdr *pkthdr;
     pcap_t *orig;
     const u_char* packet;
@@ -277,21 +283,20 @@ sequence_event_t *capsck_next(capsck_t *capsck)
     int result;
 
 
-    if (descr == NULL || *descr == NULL)
-      descr = capsck->caps;
+    if (capsck == NULL)
+        return NULL;
 
-    // if (descr == NULL || *descr == NULL)
-        // this would be a good error check
-        // here and in any function that uses a capsck_t.
-        // error check function, perhaps?
+    if (capsck->curcap == NULL || *capsck->curcap == NULL)
+      capsck->curcap = capsck->caps;
 
-    orig = *descr;
+
+    orig = *capsck->curcap;
 
     // Since we're not relying on an "any" interface, we go once around the 
     // circle of interfaces and stop if we find something interesting
 
     do {
-        result = pcap_next_ex(*descr, &pkthdr, &packet);
+        result = pcap_next_ex(*capsck->curcap, &pkthdr, &packet);
         switch (result) {
         case 0: // timeout expired
             ret.is_interesting = 0;
@@ -304,10 +309,10 @@ sequence_event_t *capsck_next(capsck_t *capsck)
             ret.is_interesting = 0;
             break;
         }
-        descr++;
-        if (*descr == NULL)
-            descr = capsck->caps;
-    } while (*descr != orig && !ret.is_interesting);
+        capsck->curcap++;
+        if (*capsck->curcap == NULL)
+            capsck->curcap = capsck->caps;
+    } while (*capsck->curcap != orig && !ret.is_interesting);
     return &ret;
 }
 
@@ -349,7 +354,7 @@ capsck_t *capsck_openallinterfaces(char *filter)
     capsck_t *ret;
     char errbuf[PCAP_ERRBUF_SIZE];
 
-    printf("%s\n", filter);
+    // printf("%s\n", filter);
 
     if (pcap_findalldevs(&alldevs, errbuf) == -1)
         return NULL;
@@ -638,11 +643,15 @@ typedef struct sequence_event {
 
 long _cdecl capsck_se_ts_sec(sequence_event_t *se)
 {
+    if (!se)
+        return NULL;
     return se->ts.tv_sec;
 }
 
 long _cdecl capsck_se_ts_usec(sequence_event_t *se)
 {
+    if (!se)
+        return NULL;
     return se->ts.tv_usec;
 }
 
@@ -653,11 +662,15 @@ u_int _cdecl capsck_se_is_local(sequence_event_t *se)
     // printf("...: %d\n", capsck_se_is_interesting(se));
     // printf("[%d]\n", se);
 
+    if (!se)
+        return NULL;
     return se->is_local;
 }
 
 u_int _cdecl capsck_se_seqno(sequence_event_t *se)
 {
+    if (!se)
+        return NULL;
     return se->seqno;
 }
 
@@ -670,10 +683,14 @@ u_int _cdecl capsck_se_is_interesting(sequence_event_t *se)
         printf("NI");
     }
     */
+    if (!se)
+        return NULL;
     return se->is_interesting;
 }
 
 u_int _cdecl capsck_se_is_error(sequence_event_t *se)
 {
+    if (!se)
+        return NULL;
     return se->is_error;
 }
