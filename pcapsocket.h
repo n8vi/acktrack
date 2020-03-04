@@ -97,8 +97,8 @@ extern "C" PCAPSOCKET_API capsck_t * _cdecl capsck_create(int sck);
 extern "C" PCAPSOCKET_API void _cdecl capsck_dispatch(capsck_t * capsck, capsck_cb_t cb);
 
 extern "C" PCAPSOCKET_API int  _cdecl capsck_openlog(char* logfile);
-extern "C" PCAPSOCKET_API void  _cdecl capsck_writelog(char* msg);
-extern "C" PCAPSOCKET_API void  _cdecl capsck_closelog(void);
+extern "C" PCAPSOCKET_API void _cdecl capsck_writelog(char* msg);
+extern "C" PCAPSOCKET_API void _cdecl capsck_closelog(void);
 extern "C" PCAPSOCKET_API char* _cdecl capsck_error(void);
 
 // For VB ...

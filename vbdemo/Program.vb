@@ -15,11 +15,11 @@ Module Module1
     Private Function capsck_openlog(ByVal logfile As String) As Boolean
     End Function
     <DllImport("pcapsocket.dll", CallingConvention:=CallingConvention.Cdecl)>
-    Private Function capsck_writelog(msg As String)
-    End Function
+    Private Sub capsck_writelog(msg As String)
+    End Sub
     <DllImport("pcapsocket.dll", CallingConvention:=CallingConvention.Cdecl)>
-    Private Function capsck_closelog()
-    End Function
+    Private Sub capsck_closelog()
+    End Sub
     <DllImport("pcapsocket.dll", CallingConvention:=CallingConvention.Cdecl)>
     Private Function capsck_error() As String
     End Function
@@ -100,8 +100,11 @@ Module Module1
 
             Console.WriteLine("sent bytes.")
 
+            capsck_writelog("starting while loop")
             While Not capsck_isfinished(cs)
+                capsck_writelog("cycling through while loop, about to call capsck_next")
                 se = capsck_next(cs)
+                capsck_writelog("called capsck_next")
                 printpkt(se)
                 span = DateTime.UtcNow - utcnow
                 If socket.Connected And (span > TimeSpan.FromSeconds(3)) Then
