@@ -18,10 +18,10 @@
 #endif WIN32
 #include "pcapsocket.h"
 
-#define logmsg(fmt, ...) if (fp) fprintf(fp, fmt, ##__VA_ARGS__)
+#define logmsg(fmt, ...) if (lfp) fprintf(lfp, fmt, ##__VA_ARGS__)
 // #define logmsg(...) if (fp) fprintf(fp, __VA_ARGS__)
 
-static FILE* fp = 0;
+static FILE* lfp = 0;
 
 /* 4 bytes IP address */
 typedef struct ip_address{
@@ -110,7 +110,7 @@ char* _cdecl capsck_flagstr(u_int flags)
 void _cdecl capsck_free(capsck_t* capsck)
 {
     if (capsck) {
-        if (fp)
+        if (lfp)
             logmsg("Closing CAPSCK\n");
         if (capsck->caps)
             free(capsck->caps);
@@ -130,8 +130,8 @@ u_int relseq(capsck_t *capsck, u_int absseq, int islseq)
 
 int _cdecl capsck_openlog(char* logfile)
 {
-    fp = fopen(logfile, "w");
-    if (fp == NULL)
+    lfp = fopen(logfile, "w");
+    if (lfp == NULL)
         return 0;
     else
         logmsg("log file opened\n");
@@ -140,14 +140,13 @@ int _cdecl capsck_openlog(char* logfile)
 
 void _cdecl capsck_writelog(char* msg)
 {
-    if (fp)
-        logmsg("APP: %s\n", msg);
+    logmsg("APP: %s\n", msg);
 }
 
 void _cdecl capsck_closelog(void)
 {
-    if (fp)
-        fclose(fp);
+    if (lfp)
+        fclose(lfp);
 }
 
 int _cdecl capsck_isfinished(capsck_t *capsck)
@@ -176,10 +175,17 @@ void _cdecl capsck_parsepacket(capsck_t* capsck, const struct pcap_pkthdr* pkthd
     int islpkt = 0;
     int gotlack = 0;
     int gotlseq = 0;
+    u_char *magic;
 
     bzero(event_data, sizeof(sequence_event_t));
 
-    ih = (ip_header*)(packet + 14);
+    magic = (u_char*)(packet + 4);
+
+    if (((*magic) & 0xf0) != 0x40)
+        magic = (u_char*)(packet + 14);
+
+    //ih = (ip_header*)(packet + 14);
+    ih = (ip_header*)(magic);
     ip_len = (ih->ver_ihl & 0xf) * 4;
     th = (tcp_header*)((u_char*)ih + ip_len);
 
@@ -393,17 +399,19 @@ capsck_t *capsck_openallinterfaces(char *filter)
     capsck_t *ret;
     char errbuf[PCAP_ERRBUF_SIZE];
 
-    // printf("%s\n", filter);
+    logmsg("Filter: %s\n", filter);
 
     if (pcap_findalldevs(&alldevs, errbuf) == -1)
         return NULL;
 
     for (d=alldevs; d != NULL; d = d->next) {
         has_ipv4_addr = 0;
-        for(a=d->addresses; a; a=a->next) {
+        if (!strcmp(d->name, "\\Device\\NPF_Loopback"))
+            has_ipv4_addr = 1;
+        else for(a=d->addresses; a; a=a->next) {
             if (a->addr->sa_family == AF_INET)
                 has_ipv4_addr = 1;
-            }
+        }
         if (! has_ipv4_addr) {
             continue;
             }
@@ -668,8 +676,7 @@ typedef struct sequence_event {
 long _cdecl capsck_se_ts_sec(sequence_event_t *se)
 {
     if (!se) {
-        if (fp)
-        printf("SEQUENCE_EVENT_TS_SEC CALLED ON NULL SEQUENCE_EVENT\n");
+        logmsg("SEQUENCE_EVENT_TS_SEC CALLED ON NULL SEQUENCE_EVENT\n");
         return NULL;
     }
     return se->ts.tv_sec;
@@ -678,7 +685,7 @@ long _cdecl capsck_se_ts_sec(sequence_event_t *se)
 long _cdecl capsck_se_ts_usec(sequence_event_t *se)
 {
     if (!se) {
-        printf("SEQUENCE_EVENT_TS_USEC CALLED ON NULL SEQUENCE_EVENT\n");
+        logmsg("SEQUENCE_EVENT_TS_USEC CALLED ON NULL SEQUENCE_EVENT\n");
         return NULL;
     }
     return se->ts.tv_usec;
@@ -692,7 +699,7 @@ u_int _cdecl capsck_se_is_local(sequence_event_t *se)
     // printf("[%d]\n", se);
 
     if (!se) {
-        printf("SEQUENCE_EVENT_IS_LOCAL CALLED ON NULL SEQUENCE_EVENT\n");
+        logmsg("SEQUENCE_EVENT_IS_LOCAL CALLED ON NULL SEQUENCE_EVENT\n");
         return NULL;
     }
     return se->is_local;
@@ -701,7 +708,7 @@ u_int _cdecl capsck_se_is_local(sequence_event_t *se)
 u_int _cdecl capsck_se_seqno(sequence_event_t *se)
 {
     if (!se) {
-        printf("SEQUENCE_EVENT_SEQNO CALLED ON NULL SEQUENCE_EVENT\n");
+        logmsg("SEQUENCE_EVENT_SEQNO CALLED ON NULL SEQUENCE_EVENT\n");
         return NULL;
     }
     return se->seqno;
@@ -717,7 +724,7 @@ u_int _cdecl capsck_se_is_interesting(sequence_event_t *se)
     }
     */
     if (!se) {
-        printf("SEQUENCE_EVENT_IS_INTERESTING CALLED ON NULL SEQUENCE_EVENT\n");
+        logmsg("SEQUENCE_EVENT_IS_INTERESTING CALLED ON NULL SEQUENCE_EVENT\n");
         return NULL;
     }
     return se->is_interesting;
@@ -726,7 +733,7 @@ u_int _cdecl capsck_se_is_interesting(sequence_event_t *se)
 u_int _cdecl capsck_se_is_error(sequence_event_t *se)
 {
     if (!se) {
-        printf("SEQUENCE_EVENT_IS_ERROR CALLED ON NULL SEQUENCE_EVENT\n");
+        logmsg("SEQUENCE_EVENT_IS_ERROR CALLED ON NULL SEQUENCE_EVENT\n");
         return NULL;
     }
     return se->is_error;

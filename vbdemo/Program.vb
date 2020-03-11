@@ -130,9 +130,18 @@ Module Module1
             Return Nothing
         End Try
 
+
+
         For Each ipaddress In hostEntry.AddressList
-            Dim ipe As IPEndPoint = New IPEndPoint(ipaddress, port)
+            Dim ipe As IPEndPoint
+            Try
+                ipe = New IPEndPoint(System.Net.IPAddress.Parse(server), port)
+            Catch
+                ipe = New IPEndPoint(ipaddress, port)
+            End Try
+
             Dim sock As Socket = New Socket(ipe.AddressFamily, SocketType.Stream, ProtocolType.Tcp)
+            Console.WriteLine("Connecting to {0}:{1}", server, port)
             sock.Connect(ipe)
 
             If sock.Connected Then
