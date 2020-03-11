@@ -1,9 +1,11 @@
 Example linux/windows cross-platform code for creating a packet capture filtered to capture traffic associated
 with a given socket can be found in "pcapsocket.c"
 
-Under linux, "make" builds and "make test" runs the code under gdb.
+Under linux, "make" should build and "make test" should run the code under gdb.  I haven't tested it recently so it may be broken.
 
 Under windows, the code can be built and debugged with visual studio by loading pcapsocket.sln.
 
-Right now the code compiles a DLL and a test EXE under visual studio.  I am in the process of making it compile
-a shared object and a test binary in linux.
+Right now the code compiles a DLL and two demo EXEs under visual studio, one written in C and the other in VB.  I am in the process
+of making it compile a shared object and a test binary in linux.
+
+Expect the project to be renamed soon.
