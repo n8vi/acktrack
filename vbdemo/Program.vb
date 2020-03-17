@@ -6,10 +6,6 @@ Imports System.Runtime.InteropServices
 
 Module Module1
 
-    'extern "C" PCAPSOCKET_API int  _cdecl acktrack_openlog(char* logfile);
-    'extern "C" PCAPSOCKET_API void  _cdecl acktrack_writelog(char* msg);
-    'extern "C" PCAPSOCKET_API void  _cdecl acktrack_closelog(void);
-    'extern "C" PCAPSOCKET_API char* _cdecl acktrack_error(void);
 
     <DllImport("acktrack.dll", CallingConvention:=CallingConvention.Cdecl)>
     Private Function acktrack_openlog(ByVal logfile As String) As Boolean

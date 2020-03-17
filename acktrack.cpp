@@ -111,7 +111,7 @@ void _cdecl acktrack_free(acktrack_t* acktrack)
 {
     if (acktrack) {
         if (lfp)
-            logmsg("Closing CAPSCK\n");
+            logmsg("Closing ACKTRACK\n");
         if (acktrack->caps)
             free(acktrack->caps);
         free(acktrack);
@@ -323,7 +323,7 @@ sequence_event_t *acktrack_next(acktrack_t *acktrack)
 
 
     if (acktrack == NULL) {
-        logmsg("CAPSCK_NEXT CALLED ON NULL CAPSCK\n");
+        logmsg("ACKTRACK_NEXT CALLED ON NULL ACKTRACK\n");
         return NULL;
     }
 
@@ -340,15 +340,15 @@ sequence_event_t *acktrack_next(acktrack_t *acktrack)
         result = pcap_next_ex(*acktrack->curcap, &pkthdr, &packet);
         switch (result) {
         case 0: // timeout expired
-            logmsg("CAPSCK_NEXT: timeout expired\n");
+            logmsg("ACKTRACK_NEXT: timeout expired\n");
             ret.is_interesting = 0;
             break;
         case 1: // Got a packet
-            logmsg("CAPSCK_NEXT: GOT A PACKET\n");
+            logmsg("ACKTRACK_NEXT: GOT A PACKET\n");
             acktrack_parsepacket(acktrack, pkthdr, packet, &ret);
             break;
         case PCAP_ERROR: // got an error
-            logmsg("CAPSCK_NEXT: GOT AN ERROR\n");
+            logmsg("ACKTRACK_NEXT: GOT AN ERROR\n");
             ret.is_error = 1;
             ret.is_interesting = 0;
             break;
