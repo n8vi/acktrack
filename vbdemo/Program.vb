@@ -6,50 +6,50 @@ Imports System.Runtime.InteropServices
 
 Module Module1
 
-    'extern "C" PCAPSOCKET_API int  _cdecl capsck_openlog(char* logfile);
-    'extern "C" PCAPSOCKET_API void  _cdecl capsck_writelog(char* msg);
-    'extern "C" PCAPSOCKET_API void  _cdecl capsck_closelog(void);
-    'extern "C" PCAPSOCKET_API char* _cdecl capsck_error(void);
+    'extern "C" PCAPSOCKET_API int  _cdecl acktrack_openlog(char* logfile);
+    'extern "C" PCAPSOCKET_API void  _cdecl acktrack_writelog(char* msg);
+    'extern "C" PCAPSOCKET_API void  _cdecl acktrack_closelog(void);
+    'extern "C" PCAPSOCKET_API char* _cdecl acktrack_error(void);
 
-    <DllImport("pcapsocket.dll", CallingConvention:=CallingConvention.Cdecl)>
-    Private Function capsck_openlog(ByVal logfile As String) As Boolean
+    <DllImport("acktrack.dll", CallingConvention:=CallingConvention.Cdecl)>
+    Private Function acktrack_openlog(ByVal logfile As String) As Boolean
     End Function
-    <DllImport("pcapsocket.dll", CallingConvention:=CallingConvention.Cdecl)>
-    Private Sub capsck_writelog(msg As String)
+    <DllImport("acktrack.dll", CallingConvention:=CallingConvention.Cdecl)>
+    Private Sub acktrack_writelog(msg As String)
     End Sub
-    <DllImport("pcapsocket.dll", CallingConvention:=CallingConvention.Cdecl)>
-    Private Sub capsck_closelog()
+    <DllImport("acktrack.dll", CallingConvention:=CallingConvention.Cdecl)>
+    Private Sub acktrack_closelog()
     End Sub
-    <DllImport("pcapsocket.dll", CallingConvention:=CallingConvention.Cdecl)>
-    Private Function capsck_error() As String
+    <DllImport("acktrack.dll", CallingConvention:=CallingConvention.Cdecl)>
+    Private Function acktrack_error() As String
     End Function
 
-    <DllImport("pcapsocket.dll", CallingConvention:=CallingConvention.Cdecl)>
-    Private Function capsck_create_fromstrings(ByVal LocalEndPointStr As String, ByVal RemoteEndPointStr As String) As IntPtr
+    <DllImport("acktrack.dll", CallingConvention:=CallingConvention.Cdecl)>
+    Private Function acktrack_create_fromstrings(ByVal LocalEndPointStr As String, ByVal RemoteEndPointStr As String) As IntPtr
     End Function
-    <DllImport("pcapsocket.dll", CallingConvention:=CallingConvention.Cdecl)>
-    Private Function capsck_isfinished(ByVal cs As IntPtr) As Boolean
+    <DllImport("acktrack.dll", CallingConvention:=CallingConvention.Cdecl)>
+    Private Function acktrack_isfinished(ByVal cs As IntPtr) As Boolean
     End Function
-    <DllImport("pcapsocket.dll", CallingConvention:=CallingConvention.Cdecl)>
-    Private Function capsck_next(capsck As IntPtr) As IntPtr
+    <DllImport("acktrack.dll", CallingConvention:=CallingConvention.Cdecl)>
+    Private Function acktrack_next(acktrack As IntPtr) As IntPtr
     End Function
-    <DllImport("pcapsocket.dll", CallingConvention:=CallingConvention.Cdecl)>
-    Private Function capsck_se_ts_sec(ByVal se As IntPtr) As Integer
+    <DllImport("acktrack.dll", CallingConvention:=CallingConvention.Cdecl)>
+    Private Function acktrack_se_ts_sec(ByVal se As IntPtr) As Integer
     End Function
-    <DllImport("pcapsocket.dll", CallingConvention:=CallingConvention.Cdecl)>
-    Private Function capsck_se_ts_usec(ByVal se As IntPtr) As Integer
+    <DllImport("acktrack.dll", CallingConvention:=CallingConvention.Cdecl)>
+    Private Function acktrack_se_ts_usec(ByVal se As IntPtr) As Integer
     End Function
-    <DllImport("pcapsocket.dll", CallingConvention:=CallingConvention.Cdecl)>
-    Private Function capsck_se_is_local(ByVal se As IntPtr) As Boolean
+    <DllImport("acktrack.dll", CallingConvention:=CallingConvention.Cdecl)>
+    Private Function acktrack_se_is_local(ByVal se As IntPtr) As Boolean
     End Function
-    <DllImport("pcapsocket.dll", CallingConvention:=CallingConvention.Cdecl)>
-    Private Function capsck_se_seqno(ByVal se As IntPtr) As Integer
+    <DllImport("acktrack.dll", CallingConvention:=CallingConvention.Cdecl)>
+    Private Function acktrack_se_seqno(ByVal se As IntPtr) As Integer
     End Function
-    <DllImport("pcapsocket.dll", CallingConvention:=CallingConvention.Cdecl)>
-    Private Function capsck_se_is_interesting(ByVal se As IntPtr) As Boolean
+    <DllImport("acktrack.dll", CallingConvention:=CallingConvention.Cdecl)>
+    Private Function acktrack_se_is_interesting(ByVal se As IntPtr) As Boolean
     End Function
-    <DllImport("pcapsocket.dll", CallingConvention:=CallingConvention.Cdecl)>
-    Private Function capsck_se_is_error(ByVal se As IntPtr) As Boolean
+    <DllImport("acktrack.dll", CallingConvention:=CallingConvention.Cdecl)>
+    Private Function acktrack_se_is_error(ByVal se As IntPtr) As Boolean
     End Function
 
     ' string result = String.Format("{0,10:D6} {0,10:X8}", value);
@@ -57,11 +57,11 @@ Module Module1
     Sub printpkt(se As IntPtr)
         If (se) Then
 
-            If capsck_se_is_interesting(se) Then
-                If capsck_se_is_local(se) Then
-                    Console.WriteLine(String.Format(" --> SEQ {0:D}.{1:D6} {2}", capsck_se_ts_sec(se), capsck_se_ts_usec(se), capsck_se_seqno(se)))
+            If acktrack_se_is_interesting(se) Then
+                If acktrack_se_is_local(se) Then
+                    Console.WriteLine(String.Format(" --> SEQ {0:D}.{1:D6} {2}", acktrack_se_ts_sec(se), acktrack_se_ts_usec(se), acktrack_se_seqno(se)))
                 Else
-                    Console.WriteLine(String.Format(" <-- ACK {0:D}.{1:D6} {2}", capsck_se_ts_sec(se), capsck_se_ts_usec(se), capsck_se_seqno(se)))
+                    Console.WriteLine(String.Format(" <-- ACK {0:D}.{1:D6} {2}", acktrack_se_ts_sec(se), acktrack_se_ts_usec(se), acktrack_se_seqno(se)))
                 End If
             End If
         End If
@@ -81,17 +81,17 @@ Module Module1
         Dim span As TimeSpan
         Dim ret As Integer
 
-        ret = capsck_openlog("C:\Users\Public\Documents\capsck.txt")
+        ret = acktrack_openlog("C:\Users\Public\Documents\acktrack.txt")
 
         If Not ret Then
-            Console.Write("Error opening log C:\Users\Public\Documents\capsck.txt: ")
-            Console.WriteLine(capsck_error())
+            Console.Write("Error opening log C:\Users\Public\Documents\acktrack.txt: ")
+            Console.WriteLine(acktrack_error())
         End If
 
 
         socket = createSocket(host, port)
 
-        cs = capsck_create_fromstrings(socket.LocalEndPoint.ToString(), socket.RemoteEndPoint.ToString())
+        cs = acktrack_create_fromstrings(socket.LocalEndPoint.ToString(), socket.RemoteEndPoint.ToString())
 
         If socket IsNot Nothing Then
             Console.WriteLine("Socket connected!")
@@ -100,11 +100,11 @@ Module Module1
 
             Console.WriteLine("sent bytes.")
 
-            capsck_writelog("starting while loop")
-            While Not capsck_isfinished(cs)
-                capsck_writelog("cycling through while loop, about to call capsck_next")
-                se = capsck_next(cs)
-                capsck_writelog("called capsck_next")
+            acktrack_writelog("starting while loop")
+            While Not acktrack_isfinished(cs)
+                acktrack_writelog("cycling through while loop, about to call acktrack_next")
+                se = acktrack_next(cs)
+                acktrack_writelog("called acktrack_next")
                 printpkt(se)
                 span = DateTime.UtcNow - utcnow
                 If socket.Connected And (span > TimeSpan.FromSeconds(3)) Then

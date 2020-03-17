@@ -3,8 +3,8 @@ LDLIBS = -lpcap
 
 all: demo
 
-demo: pcapsocket.o demo.o
-	gcc -o demo pcapsocket.o demo.o -lpcap
+demo: acktrack.o demo.o
+	gcc -o demo acktrack.o demo.o -lpcap
 
 clean:
 	rm -fr *.o $(BINS)

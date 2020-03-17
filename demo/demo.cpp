@@ -1,4 +1,4 @@
-#include "pcapsocket.h"
+#include "acktrack.h"
 #include <stdio.h>
 
 #define _WINSOCK_DEPRECATED_NO_WARNINGS 1
@@ -13,12 +13,12 @@ void error(char* msg)
 
 void printpkt(sequence_event_t* se)
 {
-    if (capsck_se_is_interesting(se)) {
-        if (capsck_se_is_local(se)) {
-            printf("  <-- SEQ %lu.%lu: %d\n", capsck_se_ts_sec(se), capsck_se_ts_usec(se), capsck_se_seqno(se));
+    if (acktrack_se_is_interesting(se)) {
+        if (acktrack_se_is_local(se)) {
+            printf("  <-- SEQ %lu.%lu: %d\n", acktrack_se_ts_sec(se), acktrack_se_ts_usec(se), acktrack_se_seqno(se));
         }
         else {
-            printf("  --> ACK %lu.%lu: %d\n", capsck_se_ts_sec(se), capsck_se_ts_usec(se), capsck_se_seqno(se));
+            printf("  --> ACK %lu.%lu: %d\n", acktrack_se_ts_sec(se), acktrack_se_ts_usec(se), acktrack_se_seqno(se));
         }
     }
 }
@@ -36,7 +36,7 @@ int main(int argc, char* argv[])
     int portno, n; // , ret;
     struct sockaddr_in serv_addr;
     struct hostent* server;
-    capsck_t* capsck;
+    acktrack_t* acktrack;
     // struct timeval t;
     int i = 0;
     char buffer[256];
@@ -80,13 +80,13 @@ int main(int argc, char* argv[])
     if (connect(sockfd, (struct sockaddr*) & serv_addr, sizeof(serv_addr)) < 0)
         error((char*)"ERROR connecting");
 
-    capsck = capsck_create(sockfd);
+    acktrack = acktrack_create(sockfd);
 
     printf("connected ... \n");
     // sleep (5);
 
-    if (capsck == NULL) {
-        fprintf(stderr, "capsck_create() failed.\n");
+    if (acktrack == NULL) {
+        fprintf(stderr, "acktrack_create() failed.\n");
         exit(0);
     }
 
@@ -100,22 +100,22 @@ int main(int argc, char* argv[])
         if (n < 0)
             error((char*)"ERROR reading from socket");
         if (n > 0) {
-            // capsck_dispatch(capsck, mycallback);
-            printpkt(capsck_next(capsck));            
+            // acktrack_dispatch(acktrack, mycallback);
+            printpkt(acktrack_next(acktrack));            
             // printf("read %d octets\n", n);
         }
         if (n == 0) {
             printf("Connection closed\n");
-            // capsck_dispatch(capsck, mycallback);
-            printpkt(capsck_next(capsck));
+            // acktrack_dispatch(acktrack, mycallback);
+            printpkt(acktrack_next(acktrack));
 #ifdef WIN32
             closesocket(sockfd);
 #else
             close(sockfd);
 #endif
-            while (!capsck_isfinished(capsck))
-                // capsck_dispatch(capsck, mycallback);
-                printpkt(capsck_next(capsck));
+            while (!acktrack_isfinished(acktrack))
+                // acktrack_dispatch(acktrack, mycallback);
+                printpkt(acktrack_next(acktrack));
             return 0;
         }
         i++;

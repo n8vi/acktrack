@@ -1,17 +1,17 @@
 {
   "format": 1,
   "restore": {
-    "C:\\Users\\tdb\\Desktop\\pcapsocket\\vbdemo\\vbdemo.vbproj": {}
+    "C:\\Users\\tdb\\Desktop\\acktrack\\vbdemo\\vbdemo.vbproj": {}
   },
   "projects": {
-    "C:\\Users\\tdb\\Desktop\\pcapsocket\\vbdemo\\vbdemo.vbproj": {
+    "C:\\Users\\tdb\\Desktop\\acktrack\\vbdemo\\vbdemo.vbproj": {
       "version": "1.0.0",
       "restore": {
-        "projectUniqueName": "C:\\Users\\tdb\\Desktop\\pcapsocket\\vbdemo\\vbdemo.vbproj",
+        "projectUniqueName": "C:\\Users\\tdb\\Desktop\\acktrack\\vbdemo\\vbdemo.vbproj",
         "projectName": "vbdemo",
-        "projectPath": "C:\\Users\\tdb\\Desktop\\pcapsocket\\vbdemo\\vbdemo.vbproj",
+        "projectPath": "C:\\Users\\tdb\\Desktop\\acktrack\\vbdemo\\vbdemo.vbproj",
         "packagesPath": "C:\\Users\\tdb\\.nuget\\packages\\",
-        "outputPath": "C:\\Users\\tdb\\Desktop\\pcapsocket\\vbdemo\\obj\\",
+        "outputPath": "C:\\Users\\tdb\\Desktop\\acktrack\\vbdemo\\obj\\",
         "projectStyle": "PackageReference",
         "configFilePaths": [
           "C:\\Users\\tdb\\AppData\\Roaming\\NuGet\\NuGet.Config",
