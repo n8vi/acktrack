@@ -7,3 +7,4 @@ Under windows, the code can be built and debugged with visual studio by loading 
 Right now the code compiles a DLL and two demo EXEs under visual studio, one written in C and the other in VB.  
 I am in the process of making it compile a shared object and a test binary in linux.
 
+Currently the library only supports IPv4 sockets, but IPv6 should be added soon.
