@@ -277,7 +277,7 @@ void _cdecl capsck_parsepacket(capsck_t* capsck, const struct pcap_pkthdr* pkthd
         event_data->seqno = relseqno + datalen;
         event_data->is_interesting = 1;
     }
-    logmsg("   --> is_local=%d seqno=%d is_interesting=%d\n", event_data->is_local, event_data->seqno, event_data->is_interesting);
+    logmsg("   --> is_local=%d seqno=%d is_interesting=%d, len=%d\n", event_data->is_local, event_data->seqno, event_data->is_interesting, datalen);
 
 }
 
@@ -436,7 +436,7 @@ capsck_t *capsck_openallinterfaces(char *filter)
         descr[i] = pcap_open_live(d->name, BUFSIZ, 0, -1,errbuf);
 
         if(descr[i] == NULL) {
-            sprintf(errbuf, "pcap_open_live failed for interface %s", d->name);
+            logmsg("pcap_open_live failed for interface %s", d->name);
             capsck_freeip4devs(f);
             free(descr);
             return NULL;
@@ -445,7 +445,7 @@ capsck_t *capsck_openallinterfaces(char *filter)
     // compile the filter string we built above into a BPF binary.  The string, by the way, can be tested with
     // tshark or wireshark
         if (pcap_compile(descr[i], &fp, filter, 0, PCAP_NETMASK_UNKNOWN) == -1) {
-            strcpy(errbuf, "pcap_compile failed");
+            logmsg("pcap_compile failed");
             capsck_freeip4devs(f);
             free(descr);
             return NULL;
@@ -453,7 +453,7 @@ capsck_t *capsck_openallinterfaces(char *filter)
 
         // Load the compiled filter into the kernel
         if (pcap_setfilter(descr[i], &fp) == -1) {
-            strcpy(errbuf, "pcap_setfilter failed");
+            logmsg("pcap_setfilter failed");
             capsck_freeip4devs(f);
             free(descr);
             return NULL;
