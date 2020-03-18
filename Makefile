@@ -3,11 +3,13 @@ LDLIBS = -lpcap
 
 all: demo
 
-demo: acktrack.o demo.o
-	gcc -o demo acktrack.o demo.o -lpcap
+demo: 
+	(cd demo; make demo)
+	cp demo/demo .
 
 clean:
-	rm -fr *.o $(BINS)
+	(cd demo; make clean)
+	rm -fr *.o 
 
 test: all
         #

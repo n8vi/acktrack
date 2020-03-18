@@ -15,7 +15,7 @@
 // #include "pch.h"
 #include <utility>
 #include <limits.h>
-#endif WIN32
+#endif // WIN32
 #include "acktrack.h"
 
 #define logmsg(fmt, ...) if (lfp) fprintf(lfp, fmt, ##__VA_ARGS__)
@@ -61,7 +61,7 @@ typedef struct tcp_header{
 #define ACKFLAG (1<<20)
 #define URGFLAG (1<<21)
 
-char* _cdecl acktrack_flagstr(u_int flags)
+char* CDECL acktrack_flagstr(u_int flags)
 {
     static char ret[7] = "------";
 
@@ -107,7 +107,7 @@ char* _cdecl acktrack_flagstr(u_int flags)
     return ret;
 }
 
-void _cdecl acktrack_free(acktrack_t* acktrack)
+void CDECL acktrack_free(acktrack_t* acktrack)
 {
     if (acktrack) {
         if (lfp)
@@ -128,7 +128,7 @@ u_int relseq(acktrack_t *acktrack, u_int absseq, int islseq)
     return absseq;
 }
 
-int _cdecl acktrack_openlog(char* logfile)
+int CDECL acktrack_openlog(char* logfile)
 {
     lfp = fopen(logfile, "w");
     if (lfp == NULL)
@@ -138,27 +138,27 @@ int _cdecl acktrack_openlog(char* logfile)
         return 1;
 }
 
-void _cdecl acktrack_writelog(char* msg)
+void CDECL acktrack_writelog(char* msg)
 {
     logmsg("APP: %s\n", msg);
 }
 
-void _cdecl acktrack_closelog(void)
+void CDECL acktrack_closelog(void)
 {
     if (lfp)
         fclose(lfp);
 }
 
-int _cdecl acktrack_isfinished(acktrack_t *acktrack)
+int CDECL acktrack_isfinished(acktrack_t *acktrack)
 {
     if (!acktrack)
-        return NULL;
+        return 1;
     int ret = (acktrack->gotlfin && acktrack->gotrfin && acktrack->lastlack > acktrack->lfinseq&& acktrack->lastrack > acktrack->rfinseq) || acktrack->gotrst;
     logmsg("acktrack_isfinished: %d%d%d%d%d = %d\n", acktrack->gotlfin, acktrack->gotrfin, acktrack->lastlack > acktrack->lfinseq, acktrack->lastrack > acktrack->rfinseq, acktrack->gotrst, ret);
     return ret;
 }
 
-void _cdecl acktrack_parsepacket(acktrack_t* acktrack, const struct pcap_pkthdr* pkthdr, const u_char* packet, sequence_event_t* event_data)
+void CDECL acktrack_parsepacket(acktrack_t* acktrack, const struct pcap_pkthdr* pkthdr, const u_char* packet, sequence_event_t* event_data)
 {    
     ip_header* ih;
     tcp_header* th;
@@ -281,7 +281,7 @@ void _cdecl acktrack_parsepacket(acktrack_t* acktrack, const struct pcap_pkthdr*
 
 }
 
-void _cdecl acktrack_callback(u_char* user, const struct pcap_pkthdr* pkthdr, const u_char* packet)
+void CDECL acktrack_callback(u_char* user, const struct pcap_pkthdr* pkthdr, const u_char* packet)
 {
     sequence_event_t event_data;
     acktrack_t* acktrack = (acktrack_t*)user;
@@ -293,7 +293,7 @@ void _cdecl acktrack_callback(u_char* user, const struct pcap_pkthdr* pkthdr, co
         cb(acktrack, &event_data);
 }
 
-void _cdecl acktrack_freeip4devs(pcap_if_t* f)
+void CDECL acktrack_freeip4devs(pcap_if_t* f)
 {
     pcap_if_t* n;
 
@@ -361,11 +361,11 @@ sequence_event_t *acktrack_next(acktrack_t *acktrack)
     return &ret;
 }
 
-void _cdecl acktrack_dispatch(acktrack_t* acktrack, acktrack_cb_t cb)
+void CDECL acktrack_dispatch(acktrack_t* acktrack, acktrack_cb_t cb)
 {
     pcap_t** descr;
 
-    acktrack->cb = cb;
+    acktrack->cb = (void*) cb;
 
     descr = acktrack->caps;
 
@@ -480,13 +480,13 @@ acktrack_t *acktrack_openallinterfaces(char *filter)
 }
 
 
-char* _cdecl acktrack_error(void)
+char* CDECL acktrack_error(void)
 {
 #ifdef _WIN32
     char * buf;
     FormatMessageA(FORMAT_MESSAGE_ALLOCATE_BUFFER | FORMAT_MESSAGE_FROM_SYSTEM | FORMAT_MESSAGE_IGNORE_INSERTS, NULL, WSAGetLastError(), MAKELANGID(LANG_NEUTRAL, SUBLANG_DEFAULT), (LPSTR)&buf, 0, NULL);
 #else
-    char* buf
+    char* buf;
     buf = strerror(errno);
 #endif
 
@@ -494,7 +494,7 @@ char* _cdecl acktrack_error(void)
 
 }
 
-acktrack_t* _cdecl acktrack_create_fromstrings(char* LocalEndPointStr, char* RemoteEndPointStr)
+acktrack_t* CDECL acktrack_create_fromstrings(char* LocalEndPointStr, char* RemoteEndPointStr)
 {
     char lepstr[22];
     char repstr[22];
@@ -544,7 +544,7 @@ acktrack_t *acktrack_create(int sck) // no errbuf
     const char rsource[50] = "";
     const char rdest[50] = "";
     int type;
-    int typelen = sizeof(type);
+    socklen_t typelen = sizeof(type);
     const char filter[201] = "";
 
 /**************************************************************************************[ maximum possible filter size ]****************************************************************************************\
@@ -565,6 +565,13 @@ acktrack_t *acktrack_create(int sck) // no errbuf
 
 
     logmsg("Log file opened\n");
+
+/*
+acktrack.cpp: In function ‘acktrack_t* acktrack_create(int)’:
+acktrack.cpp:569:68: error: invalid conversion from ‘int*’ to ‘socklen_t* {aka unsigned int*}’ [-fpermissive]
+     r = getsockopt(sck, SOL_SOCKET, SO_TYPE, (char*)&type, &typelen);
+                                                                    ^
+*/
 
     r = getsockopt(sck, SOL_SOCKET, SO_TYPE, (char*)&type, &typelen);
 
@@ -673,25 +680,25 @@ typedef struct sequence_event {
 } sequence_event_t;
 */
 
-long _cdecl acktrack_se_ts_sec(sequence_event_t *se)
+long CDECL acktrack_se_ts_sec(sequence_event_t *se)
 {
     if (!se) {
         logmsg("SEQUENCE_EVENT_TS_SEC CALLED ON NULL SEQUENCE_EVENT\n");
-        return NULL;
+        return 0;
     }
     return se->ts.tv_sec;
 }
 
-long _cdecl acktrack_se_ts_usec(sequence_event_t *se)
+long CDECL acktrack_se_ts_usec(sequence_event_t *se)
 {
     if (!se) {
         logmsg("SEQUENCE_EVENT_TS_USEC CALLED ON NULL SEQUENCE_EVENT\n");
-        return NULL;
+        return 0;
     }
     return se->ts.tv_usec;
 }
 
-u_int _cdecl acktrack_se_is_local(sequence_event_t *se)
+u_int CDECL acktrack_se_is_local(sequence_event_t *se)
 {
 
     // printf("TX:is_interesting: %d\n", se->is_interesting);
@@ -700,21 +707,21 @@ u_int _cdecl acktrack_se_is_local(sequence_event_t *se)
 
     if (!se) {
         logmsg("SEQUENCE_EVENT_IS_LOCAL CALLED ON NULL SEQUENCE_EVENT\n");
-        return NULL;
+        return 0;
     }
     return se->is_local;
 }
 
-u_int _cdecl acktrack_se_seqno(sequence_event_t *se)
+u_int CDECL acktrack_se_seqno(sequence_event_t *se)
 {
     if (!se) {
         logmsg("SEQUENCE_EVENT_SEQNO CALLED ON NULL SEQUENCE_EVENT\n");
-        return NULL;
+        return 0;
     }
     return se->seqno;
 }
 
-u_int _cdecl acktrack_se_is_interesting(sequence_event_t *se)
+u_int CDECL acktrack_se_is_interesting(sequence_event_t *se)
 {
     /*
     if (se->is_interesting) {
@@ -725,16 +732,16 @@ u_int _cdecl acktrack_se_is_interesting(sequence_event_t *se)
     */
     if (!se) {
         logmsg("SEQUENCE_EVENT_IS_INTERESTING CALLED ON NULL SEQUENCE_EVENT\n");
-        return NULL;
+        return 0;
     }
     return se->is_interesting;
 }
 
-u_int _cdecl acktrack_se_is_error(sequence_event_t *se)
+u_int CDECL acktrack_se_is_error(sequence_event_t *se)
 {
     if (!se) {
         logmsg("SEQUENCE_EVENT_IS_ERROR CALLED ON NULL SEQUENCE_EVENT\n");
-        return NULL;
+        return 0;
     }
     return se->is_error;
 }

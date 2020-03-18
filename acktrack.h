@@ -12,13 +12,17 @@
 
 #pragma once
 
-// #ifdef _WIN32
+#ifdef _WIN32
 #ifdef ACKTRACK_EXPORTS
 #define ACKTRACK_API __declspec(dllexport)
 #else
 #define ACKTRACK_API __declspec(dllimport)
 #endif
-// #endif
+#define CDECL CDECL
+#else
+#define ACKTRACK_API
+#define CDECL
+#endif
 
 #include <stdlib.h>
 #include <string.h>
@@ -91,25 +95,25 @@ typedef struct acktrack_t{
 
 typedef void (*acktrack_cb_t)(acktrack_t*, sequence_event_t *);
 
-extern "C" ACKTRACK_API void _cdecl acktrack_free(acktrack_t *acktrack);
-extern "C" ACKTRACK_API int _cdecl acktrack_isfinished(acktrack_t *acktrack);
-extern "C" ACKTRACK_API acktrack_t * _cdecl acktrack_create(int sck);
-extern "C" ACKTRACK_API void _cdecl acktrack_dispatch(acktrack_t * acktrack, acktrack_cb_t cb);
+extern "C" ACKTRACK_API void CDECL acktrack_free(acktrack_t *acktrack);
+extern "C" ACKTRACK_API int CDECL acktrack_isfinished(acktrack_t *acktrack);
+extern "C" ACKTRACK_API acktrack_t * CDECL acktrack_create(int sck);
+extern "C" ACKTRACK_API void CDECL acktrack_dispatch(acktrack_t * acktrack, acktrack_cb_t cb);
 
-extern "C" ACKTRACK_API int  _cdecl acktrack_openlog(char* logfile);
-extern "C" ACKTRACK_API void _cdecl acktrack_writelog(char* msg);
-extern "C" ACKTRACK_API void _cdecl acktrack_closelog(void);
-extern "C" ACKTRACK_API char* _cdecl acktrack_error(void);
+extern "C" ACKTRACK_API int  CDECL acktrack_openlog(char* logfile);
+extern "C" ACKTRACK_API void CDECL acktrack_writelog(char* msg);
+extern "C" ACKTRACK_API void CDECL acktrack_closelog(void);
+extern "C" ACKTRACK_API char* CDECL acktrack_error(void);
 
 // For VB ...
 // Public Declare Ansi Function acktrack_create_fromstrings Lib "acktrack.dll" Alias "acktrack_create_fromstrings" (ByVal LocalEndPointStr As String, ByVal RemoteEndPointStr As String) As IntPtr
 // cs = acktrack_create_fromstrings(socket.LocalEndPoint.ToString(), socket.RemoteEndPoint.ToString());
-extern "C" ACKTRACK_API acktrack_t * _cdecl acktrack_create_fromstrings(char* LocalEndPointStr, char* RemoteEndPointStr);
-extern "C" ACKTRACK_API sequence_event_t * _cdecl acktrack_next(acktrack_t * acktrack);
-extern "C" ACKTRACK_API long _cdecl acktrack_se_ts_sec(sequence_event_t *se);
-extern "C" ACKTRACK_API long _cdecl acktrack_se_ts_usec(sequence_event_t *se);
-extern "C" ACKTRACK_API u_int _cdecl acktrack_se_is_local(sequence_event_t *se);
-extern "C" ACKTRACK_API u_int _cdecl acktrack_se_seqno(sequence_event_t *se);
-extern "C" ACKTRACK_API u_int _cdecl acktrack_se_is_interesting(sequence_event_t *se);
-extern "C" ACKTRACK_API u_int _cdecl acktrack_se_is_error(sequence_event_t *se);
+extern "C" ACKTRACK_API acktrack_t * CDECL acktrack_create_fromstrings(char* LocalEndPointStr, char* RemoteEndPointStr);
+extern "C" ACKTRACK_API sequence_event_t * CDECL acktrack_next(acktrack_t * acktrack);
+extern "C" ACKTRACK_API long CDECL acktrack_se_ts_sec(sequence_event_t *se);
+extern "C" ACKTRACK_API long CDECL acktrack_se_ts_usec(sequence_event_t *se);
+extern "C" ACKTRACK_API u_int CDECL acktrack_se_is_local(sequence_event_t *se);
+extern "C" ACKTRACK_API u_int CDECL acktrack_se_seqno(sequence_event_t *se);
+extern "C" ACKTRACK_API u_int CDECL acktrack_se_is_interesting(sequence_event_t *se);
+extern "C" ACKTRACK_API u_int CDECL acktrack_se_is_error(sequence_event_t *se);
 
