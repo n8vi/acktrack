@@ -18,7 +18,7 @@
 #else
 #define ACKTRACK_API __declspec(dllimport)
 #endif
-#define CDECL CDECL
+#define CDECL _cdecl
 #else
 #define ACKTRACK_API
 #define CDECL
