@@ -118,7 +118,8 @@
       <AdditionalDependencies>odbc32.lib;odbccp32.lib;wsock32.lib;ws2_32.lib;Iphlpapi.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
     <PostBuildEvent>
-      <Command>xcopy /y /d $(outdir)acktrack.dll vbdemo\bin\x86\Debug\netcoreapp3.1</Command>
+      <Command>xcopy /y /d $(outdir)acktrack.dll vbdemo\bin\x86\Debug\netcoreapp3.1\
+xcopy /y /d $(outdir)acktrack.dll vbdemo\bin\Debug\netcoreapp3.1\</Command>
     </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
@@ -154,7 +155,8 @@
       <AdditionalDependencies>odbc32.lib;odbccp32.lib;wsock32.lib;ws2_32.lib;Iphlpapi.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
     <PostBuildEvent>
-      <Command>xcopy /y /d $(outdir)acktrack.dll vbdemo\bin\x86\Debug\netcoreapp3.1</Command>
+      <Command>xcopy /y /d $(outdir)acktrack.dll vbdemo\bin\x86\Debug\netcoreapp3.1\
+xcopy /y /d $(outdir)acktrack.dll vbdemo\bin\Debug\netcoreapp3.1\</Command>
     </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
@@ -192,7 +194,8 @@
       <AdditionalDependencies>odbc32.lib;odbccp32.lib;wsock32.lib;ws2_32.lib;Iphlpapi.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
     <PostBuildEvent>
-      <Command>xcopy /y /d $(outdir)acktrack.dll vbdemo\bin\x86\Debug\netcoreapp3.1</Command>
+      <Command>xcopy /y /d $(outdir)acktrack.dll vbdemo\bin\x86\Debug\netcoreapp3.1\
+xcopy /y /d $(outdir)acktrack.dll vbdemo\bin\Debug\netcoreapp3.1\</Command>
     </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
@@ -230,7 +233,8 @@
       <AdditionalDependencies>odbc32.lib;odbccp32.lib;wsock32.lib;ws2_32.lib;Iphlpapi.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
     <PostBuildEvent>
-      <Command>xcopy /y /d $(outdir)acktrack.dll vbdemo\bin\x86\Debug\netcoreapp3.1</Command>
+      <Command>xcopy /y /d $(outdir)acktrack.dll vbdemo\bin\x86\Debug\netcoreapp3.1\
+xcopy /y /d $(outdir)acktrack.dll vbdemo\bin\Debug\netcoreapp3.1\</Command>
     </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemGroup>
