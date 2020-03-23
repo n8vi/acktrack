@@ -15,10 +15,10 @@ void printpkt(sequence_event_t* se)
 {
     if (acktrack_se_is_interesting(se)) {
         if (acktrack_se_is_local(se)) {
-            printf("  <-- SEQ %lu.%lu: %d\n", acktrack_se_ts_sec(se), acktrack_se_ts_usec(se), acktrack_se_seqno(se));
+            printf("  --> SEQ %lu.%lu: %d\n", acktrack_se_ts_sec(se), acktrack_se_ts_usec(se), acktrack_se_seqno(se));
         }
         else {
-            printf("  --> ACK %lu.%lu: %d\n", acktrack_se_ts_sec(se), acktrack_se_ts_usec(se), acktrack_se_seqno(se));
+            printf("  <-- ACK %lu.%lu: %d\n", acktrack_se_ts_sec(se), acktrack_se_ts_usec(se), acktrack_se_seqno(se));
         }
     }
 }
