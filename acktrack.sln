@@ -5,7 +5,7 @@ VisualStudioVersion = 16.0.29709.97
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "acktrack", "acktrack.vcxproj", "{F7664E65-B16C-473F-A11F-0BF0C7D4080C}"
 EndProject
-Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "cdemo", "demo\demo.vcxproj", "{04DF316D-1781-4A4C-9DEB-2767A65FFDAD}"
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "cdemo", "cdemo\cdemo.vcxproj", "{04DF316D-1781-4A4C-9DEB-2767A65FFDAD}"
 	ProjectSection(ProjectDependencies) = postProject
 		{F7664E65-B16C-473F-A11F-0BF0C7D4080C} = {F7664E65-B16C-473F-A11F-0BF0C7D4080C}
 	EndProjectSection

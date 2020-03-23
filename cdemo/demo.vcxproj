@@ -21,7 +21,7 @@
   <PropertyGroup Label="Globals">
     <VCProjectVersion>16.0</VCProjectVersion>
     <ProjectGuid>{04DF316D-1781-4A4C-9DEB-2767A65FFDAD}</ProjectGuid>
-    <RootNamespace>demo</RootNamespace>
+    <RootNamespace>cdemo</RootNamespace>
     <WindowsTargetPlatformVersion>10.0</WindowsTargetPlatformVersion>
     <ProjectName>cdemo</ProjectName>
   </PropertyGroup>

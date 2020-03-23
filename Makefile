@@ -1,17 +1,17 @@
 CFLAGS=-ggdb
 LDLIBS = -lpcap
 
-all: demo/cdemo
+all: cdemo/cdemo
 
-demo/cdemo: 
-	(cd demo; make cdemo)
+cdemo/cdemo: 
+	(cd cdemo; make cdemo)
 
 clean:
-	(cd demo; make clean)
+	(cd cdemo; make clean)
 	rm -fr *.o 
 
 test: all
         #
 	# make a connnection to google as a demo. 
         #
-	sudo gdb -ex=r --args demo/cdemo google.com 80
+	sudo gdb -ex=r --args cdemo/cdemo google.com 80
