@@ -1,11 +1,16 @@
 CFLAGS=-ggdb
-LDLIBS = -lpcap
+LDLIBS = -lacktrack
 
 all: cdemo
 
-cdemo:  
+cdemo: ../libacktrack.so
+	gcc -o cdemo -I.. cdemo.cpp -L.. $(LDLIBS)
+
+../acktrack.o: ../acktrack.cpp
 	(cd ..; make acktrack.o)
-	gcc -o cdemo -I.. ../acktrack.o cdemo.cpp $(LDLIBS)
+
+../libacktrack.so: ../acktrack.o
+	(cd ..; make libacktrack.so)
 
 clean:
-	rm -fr *.o  cdemo
+	rm -fr *.o *.so cdemo

@@ -2,5 +2,5 @@
 .*.sw*
 .vs
 Debug
-demo/Debug
-demo/cdemo
+cdemo/Debug
+cdemo/cdemo
