@@ -1,5 +1,5 @@
 CFLAGS=-ggdb
-LDLIBS = -lpcap
+DESTDIR=/usr/local
 
 all: cdemo/cdemo
 
@@ -16,12 +16,16 @@ acktrack.o: acktrack.cpp
 libacktrack.so: acktrack.o
 	gcc -shared -o libacktrack.so acktrack.o -lpcap
 
+install: libacktrack.so
+	sudo cp libacktrack.so $(DESTDIR)/lib/
+
+uninstall:
+	sudo rm -f $(DESTDIR)/lib/libacktrack.so
+
 test: all
         #
 	# make a connnection to google as a demo. 
         #
-	export LD_LIBRARY_PATH=$(CURDIR)
-	sudo ldconfig
 	sudo gdb -ex='set env LD_LIBRARY_PATH $(CURDIR)' -ex=r --args cdemo/cdemo google.com 80
 
 # set env LD_LIBRARY_PATH $(CURDIR)
