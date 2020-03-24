@@ -22,7 +22,7 @@ test: all
         #
 	export LD_LIBRARY_PATH=$(CURDIR)
 	sudo ldconfig
-	sudo gdb -ex=r --args cdemo/cdemo google.com 80
+	sudo gdb -ex='set env LD_LIBRARY_PATH $(CURDIR)' -ex=r --args cdemo/cdemo google.com 80
 
 # set env LD_LIBRARY_PATH $(CURDIR)
 
