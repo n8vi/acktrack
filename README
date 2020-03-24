@@ -1,10 +1,10 @@
 A cross-platform library for keeping track of TCP ACKs in response to data sent on a socket.  Requires libpcap/winpcap/npcap.
 
-Under linux, "make" should build and "make test" should run the code under gdb.  I haven't tested it recently so it may be broken.
+Under linux, "make" builds the libacktrack.so shared library and the cdemo test binary, and "make test" runs the demo code
+under gdb.
 
 Under windows, the code can be built and debugged with visual studio by loading acktrack.sln.
 
 Right now the code compiles a DLL and two demo EXEs under visual studio, one written in C and the other in VB.  
-I am in the process of making it compile a shared object and a test binary in linux.
 
 Currently the library only supports IPv4 sockets, but IPv6 should be added soon.
