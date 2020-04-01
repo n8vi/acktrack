@@ -23,6 +23,9 @@ install: libacktrack.so
 uninstall:
 	$(SUDO) rm -f $(DESTDIR)/lib/libacktrack.so
 
+citest: all
+	(export LD_LIBRARY_PATH=$(CURDIR); cdemo/cdemo google.com 80)
+
 test: all
         #
 	# make a connnection to google as a demo. 
