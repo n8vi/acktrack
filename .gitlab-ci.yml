@@ -1,0 +1,10 @@
+stages:
+    - build
+
+before_script:
+    - apt-get update -qq && apt-get install -y -qq libpcap-dev
+
+linuxbuild:
+    stage: build
+    script:
+        make
