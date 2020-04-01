@@ -22,7 +22,7 @@ winbuild:
         - Find-PackageProvider -Name 'Nuget' -ForceBootstrap -IncludeDependencies
         - Install-Module -Name Invoke-MsBuild -RequiredVersion 2.6.0 -Force
         - Import-Module Invoke-MsBuild
-        - Invoke-MsBuild
+        - Invoke-MsBuild -Path "acktrack.sln"
 
 lintest:
     stage: test
