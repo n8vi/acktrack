@@ -17,5 +17,4 @@ linbuild:
 lintest:
     stage: test
     script:
-        - alias sudo=""
         - make test
