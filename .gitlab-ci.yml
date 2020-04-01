@@ -1,10 +1,19 @@
 stages:
     - build
+    - test
 
 before_script:
     - apt-get update -qq && apt-get install -y -qq libpcap-dev
 
-linuxbuild:
+linbuild:
     stage: build
     script:
-        make
+        - make
+    artifacts:
+        - libacktrack.so
+        - cdemo/cdemo
+
+lintest:
+    stage: test
+    script:
+        - make test
