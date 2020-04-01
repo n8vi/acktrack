@@ -17,4 +17,4 @@ linbuild:
 lintest:
     stage: test
     script:
-        - make test
+        - make SUDO="" test
