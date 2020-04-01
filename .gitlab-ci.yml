@@ -10,8 +10,9 @@ linbuild:
     script:
         - make
     artifacts:
-        - libacktrack.so
-        - cdemo/cdemo
+        paths:
+            - libacktrack.so
+            - cdemo/cdemo
 
 lintest:
     stage: test
