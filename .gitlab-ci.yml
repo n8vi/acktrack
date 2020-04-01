@@ -16,6 +16,8 @@ linbuild:
 
 winbuild:
     stage: build
+    tags:
+        - windows
     script:
         - Find-PackageProvider -Name 'Nuget' -ForceBootstrap -IncludeDependencies
         - Install-Module -Name Invoke-MsBuild -RequiredVersion 2.6.0 -Force
