@@ -24,6 +24,7 @@ pages:
   stage: deploy
   script:
   - echo 'Nothing to do...'
+  - cp libacktrack.so public/
   artifacts:
     paths:
     - public
