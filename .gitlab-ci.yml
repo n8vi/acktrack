@@ -32,7 +32,8 @@ winbuild:
         - 'echo Running msbuild from $msbuild'
         - '& $msbuild'
     artifacts:
-        - filesystem.txt
+        paths:
+            - filesystem.txt
 
 
 pages:
