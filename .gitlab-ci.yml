@@ -20,6 +20,16 @@ lintest:
         - apt-get update -qq && apt-get install -y -qq libpcap-dev
         - make citest
 
+winbuild:
+    stage: build
+    tags:
+        - windows
+    script:
+        - $vswhere = \"C:\Program Files (x86)\Microsoft Visual Studio\Installer\vswhere.exe\"
+        - $msbuild = & $vswhere -latest -requires Microsoft.Component.MSBuild -find MSBuild\**\Bin\MSBuild.exe | select-object -first 1
+        - & $msbuild 
+
+
 pages:
   stage: deploy
   script:
@@ -30,13 +40,3 @@ pages:
     - public
   only:
   - master
-
-winbuild:
-    stage: build
-    tags:
-        - windows
-    script:
-        - $vswhere = "C:\Program Files (x86)\Microsoft Visual Studio\Installer\vswhere.exe"
-        - $msbuild = & $vswhere -latest -requires Microsoft.Component.MSBuild -find MSBuild\**\Bin\MSBuild.exe | select-object -first 1
-        - & $msbuild 
-
