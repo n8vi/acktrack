@@ -14,17 +14,17 @@ linbuild:
             - libacktrack.so
             - cdemo/cdemo
 
-winbuild:
-    stage: build
-    tags:
-        - windows
-    script:
-        - Find-PackageProvider -Name 'Nuget' -ForceBootstrap -IncludeDependencies
-        - Install-Module -Name Invoke-MsBuild -RequiredVersion 2.6.0 -Force
-        - Import-Module Invoke-MsBuild
-        - Invoke-MsBuild -Path "acktrack.sln" -BypassVisualStudioDeveloperCommandPrompt
-
 lintest:
     stage: test
     script:
         - make citest
+
+# winbuild:
+#     stage: build
+#     tags:
+#         - windows
+#     script:
+#         - Find-PackageProvider -Name 'Nuget' -ForceBootstrap -IncludeDependencies
+#         - Install-Module -Name Invoke-MsBuild -RequiredVersion 2.6.0 -Force
+#         - Import-Module Invoke-MsBuild
+#         - Invoke-MsBuild -Path "acktrack.sln" -BypassVisualStudioDeveloperCommandPrompt
