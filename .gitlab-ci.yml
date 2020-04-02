@@ -25,7 +25,8 @@ winbuild:
     tags:
         - windows
     script:
-        - dir -path c:\ -recurse > filesystem.txt
+        - 'C:\Program Files (x86)\Microsoft Visual Studio\2019\BuildTools\MSBuild\Current\Bin\MSBuild.exe'
+        # - dir -path c:\ -recurse > filesystem.txt
         # - '$vswhere = "C:\Program Files (x86)\Microsoft Visual Studio\Installer\vswhere.exe"'
         # - '& $vswhere'
         # - '$msbuild = & $vswhere -latest -requires Microsoft.Component.MSBuild -find MSBuild\**\Bin\MSBuild.exe | select-object -first 1'
