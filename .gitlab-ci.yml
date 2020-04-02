@@ -20,6 +20,16 @@ lintest:
         - apt-get update -qq && apt-get install -y -qq libpcap-dev
         - make citest
 
+pages:
+  stage: deploy
+  script:
+  - echo 'Nothing to do...'
+  artifacts:
+    paths:
+    - public
+  only:
+  - master
+
 # winbuild:
 #     stage: build
 #     tags:
