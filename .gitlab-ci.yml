@@ -2,12 +2,12 @@ stages:
     - build
     - test
 
-before_script:
-    - apt-get update -qq && apt-get install -y -qq libpcap-dev
+# before_script:
 
 linbuild:
     stage: build
     script:
+        - apt-get update -qq && apt-get install -y -qq libpcap-dev
         - make
     artifacts:
         paths:
@@ -17,6 +17,7 @@ linbuild:
 lintest:
     stage: test
     script:
+        - apt-get update -qq && apt-get install -y -qq libpcap-dev
         - make citest
 
 # winbuild:
