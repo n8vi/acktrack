@@ -37,14 +37,14 @@ winbuild:
         paths:
             - Debug/
 
-wintest:
-    stage: test
-    tags:
-        - windows
-    script:
-        # not possible due to npcap licensing???
+# not possible due to npcap licensing???
+#wintest:
+#    stage: test
+#    tags:
+#        - windows
+#    script:
         # - choco install npcap
-        - Debug/cdemo google.com 80
+#        - Debug/cdemo google.com 80
 
 pages:
   stage: deploy
