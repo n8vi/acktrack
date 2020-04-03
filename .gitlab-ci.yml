@@ -25,16 +25,16 @@ winbuild:
     tags:
         - windows
     script:
-        - 'C:\Program Files (x86)\Microsoft Visual Studio\2019\BuildTools\MSBuild\Current\Bin\MSBuild.exe'
+        - & "C:\Program Files (x86)\Microsoft Visual Studio\2019\BuildTools\MSBuild\Current\Bin\MSBuild.exe"
         # - dir -path c:\ -recurse > filesystem.txt
         # - '$vswhere = "C:\Program Files (x86)\Microsoft Visual Studio\Installer\vswhere.exe"'
         # - '& $vswhere'
         # - '$msbuild = & $vswhere -latest -requires Microsoft.Component.MSBuild -find MSBuild\**\Bin\MSBuild.exe | select-object -first 1'
         # - 'echo Running msbuild from $msbuild'
         # - '& $msbuild'
-    artifacts:
-        paths:
-            - filesystem.txt
+#    artifacts:
+#        paths:
+#            - filesystem.txt
 
 
 pages:
