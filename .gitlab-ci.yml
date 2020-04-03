@@ -49,9 +49,8 @@ winbuild:
 pages:
   stage: deploy
   script:
-  - echo 'Nothing to do...'
-  - cp Debug/libacktrack.so public/
-  - cp acktrack.dll public/
+  - cp libacktrack.so public/
+  - cp Debug/acktrack.dll public/
   artifacts:
     paths:
     - public
