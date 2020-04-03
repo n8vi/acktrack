@@ -11,3 +11,6 @@ Currently the library only supports IPv4 sockets, but IPv6 should be added soon.
 
 This repo is maintained at at https://gitlab.com/n8vi/acktrack and mirrored at https://github.com/n8vi/acktrack.
 
+The latest binaries can be downloaded at https://n8vi.gitlab.io/acktrack/.
+
+
