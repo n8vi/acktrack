@@ -37,6 +37,25 @@ winbuild:
         paths:
             - Debug/
 
+wintest:
+    stage: test
+    tags:
+        - windows
+    script:
+        - choco install nmap
+        - copy C:\windows\system32\npcap\wpcap.dll Debug\
+        - Debug\cdemo "google.com" "80"
+
+#wintest:
+#   stage: test
+#   tags: 
+#        - windows
+#   script:
+#       - choco install autoit
+#       - Import-Module c:\Program Files (x86)\AutoIt3\AutoItX\AutoItX.psd1
+#       (see https://www.autoitconsulting.com/site/scripting/autoit-cmdlets-for-windows-powershell/)
+# what a pain in the ass
+
 # not possible due to npcap licensing???
 #wintest:
 #    stage: test
