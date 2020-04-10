@@ -42,13 +42,9 @@ wintest:
     tags:
         - windows
     script:
-        - (choco install -y nmap) -and (copy c:\programdata\chocolatey\logs\chocolatey.log .)
+        - choco install -y nmap --verbose --debug
         - copy C:\windows\system32\npcap\wpcap.dll Debug\
         - Debug\cdemo "google.com" "80"
-    artifacts:
-        paths:
-            - chocolatey.log
-
 
 #wintest:
 #   stage: test
