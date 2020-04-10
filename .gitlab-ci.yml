@@ -42,7 +42,7 @@ wintest:
     tags:
         - windows
     script:
-        - choco install nmap
+        - choco install -y nmap
         - copy C:\windows\system32\npcap\wpcap.dll Debug\
         - Debug\cdemo "google.com" "80"
 
