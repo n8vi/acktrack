@@ -47,6 +47,9 @@ wintest:
         - choco install nmap -y --verbose --debug --trace
         - copy C:\windows\system32\npcap\wpcap.dll Debug\
         - Debug\cdemo "google.com" "80"
+    after-script:
+        - echo "Here's the log file ..."
+        - type chocolatey.log
 
 #wintest:
 #   stage: test
