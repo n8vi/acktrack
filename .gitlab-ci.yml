@@ -44,9 +44,11 @@ wintest:
     script:
         - get-psdrive
         - choco upgrade chocolatey
-        - choco install nmap -y --verbose --debug --trace
-#        - copy C:\windows\system32\npcap\wpcap.dll Debug\
-#        - Debug\cdemo "google.com" "80"
+#        - (choco install nmap -y --verbose --debug --trace) -and (echo success)
+        - (choco install nmap -y) -or (echo success)
+        - echo nmap installation complete
+        - copy C:\windows\system32\npcap\wpcap.dll Debug\
+        - Debug\cdemo "google.com" "80"
     after_script:
         - echo $? $LASTEXITCODE
         - echo "Here's the log file ..."
