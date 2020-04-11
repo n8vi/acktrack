@@ -42,6 +42,7 @@ wintest:
     tags:
         - windows
     script:
+        - get-psdrive
         - choco upgrade chocolatey
         - choco install nmap -y --verbose --debug --trace
         - copy C:\windows\system32\npcap\wpcap.dll Debug\
