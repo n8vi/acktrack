@@ -149,6 +149,15 @@ void CDECL acktrack_closelog(void)
         fclose(lfp);
 }
 
+int CDECL acktrack_isfinishing(acktrack_t *acktrack)
+{
+    if (!acktrack)
+        return 1;
+    int ret = (acktrack->gotlfin || acktrack->gotrfin || acktrack->gotrst);
+    logmsg("acktrack_isfinishing: %d%d%d = %d\n", acktrack->gotlfin, acktrack->gotrfin, acktrack->gotrst, ret);
+    return ret;
+}
+
 int CDECL acktrack_isfinished(acktrack_t *acktrack)
 {
     if (!acktrack)

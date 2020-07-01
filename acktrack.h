@@ -97,6 +97,7 @@ typedef void (*acktrack_cb_t)(acktrack_t*, sequence_event_t *);
 
 extern "C" ACKTRACK_API void CDECL acktrack_free(acktrack_t *acktrack);
 extern "C" ACKTRACK_API int CDECL acktrack_isfinished(acktrack_t *acktrack);
+extern "C" ACKTRACK_API int CDECL acktrack_isfinishing(acktrack_t *acktrack);
 extern "C" ACKTRACK_API acktrack_t * CDECL acktrack_create(int sck);
 extern "C" ACKTRACK_API void CDECL acktrack_dispatch(acktrack_t * acktrack, acktrack_cb_t cb);
 
