@@ -4,7 +4,7 @@ SUDO?=sudo
 
 all: cdemo/cdemo
 
-cdemo/cdemo: 
+cdemo/cdemo:
 	(cd cdemo; make cdemo)
 
 clean:
@@ -24,7 +24,7 @@ uninstall:
 	$(SUDO) rm -f $(DESTDIR)/lib/libacktrack.so
 
 citest: all
-	(export LD_LIBRARY_PATH=$(CURDIR); cdemo/cdemo google.com 80)
+	$(SUDO) LD_LIBRARY_PATH=$(CURDIR) cdemo/cdemo google.com 80
 
 test: all
         #

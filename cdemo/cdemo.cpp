@@ -43,6 +43,8 @@ int main(int argc, char* argv[])
 
     int iResult;
 
+    acktrack_openlog("/tmp/acktrack.log");
+
 #ifdef WIN32
     WSADATA wsaData;
     // Initialize Winsock
@@ -87,7 +89,7 @@ int main(int argc, char* argv[])
 
     if (acktrack == NULL) {
         fprintf(stderr, "acktrack_create() failed.\n");
-        exit(0);
+        exit(1);
     }
 
     strcpy(buffer, "GET /\r\n");
