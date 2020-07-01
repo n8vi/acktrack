@@ -27,7 +27,8 @@ uninstall:
 	$(SUDO) rm -f $(DESTDIR)/lib/libacktrack.so
 
 citest: all
-	$(SUDO) LD_LIBRARY_PATH=$(CURDIR) cdemo/cdemo google.com 80
+	# needs to run as root, sudo not included here as gitlab-ci doesn't have it.
+	LD_LIBRARY_PATH=$(CURDIR) cdemo/cdemo google.com 80
 
 test: all
         #
