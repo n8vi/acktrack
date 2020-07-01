@@ -1,6 +1,9 @@
 CFLAGS=-ggdb
 DESTDIR=/usr/local
 SUDO?=sudo
+SRCDIR=$(shell pwd)
+PROJECT=$(notdir $(SRCDIR))
+PROJDESC="A cross-platform library for keeping track of TCP ACKs in response to data sent on a socket."
 
 all: cdemo/cdemo
 
@@ -9,7 +12,7 @@ cdemo/cdemo:
 
 clean:
 	(cd cdemo; make clean)
-	rm -fr *.o *.so
+	rm -fr *.o *.so $(PROJECT) *.deb
 
 acktrack.o: acktrack.cpp
 	gcc -fPIC -c acktrack.cpp
@@ -32,6 +35,19 @@ test: all
         #
 	$(SUDO) gdb -ex='set env LD_LIBRARY_PATH $(CURDIR)' -ex=r --args cdemo/cdemo google.com 80
 
-# set env LD_LIBRARY_PATH $(CURDIR)
-
+deb: libacktrack.so
+	mkdir -p $(PROJECT)/DEBIAN
+	mkdir -p $(PROJECT)/usr/local/bin
+	mkdir -p $(PROJECT)/usr/local/lib
+	mkdir -p $(PROJECT)/usr/local/include
+	mkdir -p $(PROJECT)/etc/profile.d/
+	mkdir -p $(PROJECT)/etc/init.d/
+	echo "Package: $(PROJECT)" > $(PROJECT)/DEBIAN/control
+	echo "Version: 0.$(shell git log | head -1 | cut -d' ' -f2)" >> $(PROJECT)/DEBIAN/control
+	echo "Maintainer: Brad Tarratt" >> $(PROJECT)/DEBIAN/control
+	echo "Architecture: $(shell dpkg --print-architecture)" >> $(PROJECT)/DEBIAN/control
+	echo "Description: $(PROJDESC)" >> $(PROJECT)/DEBIAN/control
+	$(eval DESTDIR=$(shell pwd)/$(PROJECT)/usr/local)
+	make DESTDIR=$(DESTDIR) install
+	dpkg-deb --build $(PROJECT)
 
