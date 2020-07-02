@@ -5,9 +5,9 @@ SRCDIR=$(shell pwd)
 PROJECT=$(notdir $(SRCDIR))
 PROJDESC="A cross-platform library for keeping track of TCP ACKs in response to data sent on a socket."
 
-all: cdemo/cdemo
+all: libacktrack.so demo
 
-cdemo/cdemo:
+demo:
 	(cd cdemo; make cdemo)
 
 clean:

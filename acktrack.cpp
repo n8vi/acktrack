@@ -17,8 +17,10 @@
 #include <limits.h>
 #endif // WIN32
 #include "acktrack.h"
+#include <time.h>
+#include <stdarg.h>
 
-#define logmsg(fmt, ...) if (lfp) fprintf(lfp, fmt, ##__VA_ARGS__)
+// #define logmsg(fmt, ...) if (lfp) {fprintf(lfp, fmt, ##__VA_ARGS__); fflush(lfp);}
 // #define logmsg(...) if (fp) fprintf(fp, __VA_ARGS__)
 
 static FILE* lfp = 0;
@@ -107,11 +109,33 @@ char* CDECL acktrack_flagstr(u_int flags)
     return ret;
 }
 
+// #define logmsg(fmt, ...) if (lfp) {fprintf(lfp, fmt, ##__VA_ARGS__); fflush(lfp);}
+
+void logmsg(const char *fmt, ...)
+{
+    char now[26];
+    va_list args;
+
+    time_t dt;
+
+    dt = time(NULL);
+    
+
+    strftime(now, 26, "%Y-%m-%d %H:%M:%S", localtime(&dt));
+
+    va_start(args, fmt);
+    fprintf(lfp, "%s: ", now);
+    vfprintf(lfp, fmt, args);
+    fprintf(lfp, "\n");
+    fflush(lfp);
+    va_end(args);
+}
+
 void CDECL acktrack_free(acktrack_t* acktrack)
 {
     if (acktrack) {
         if (lfp)
-            logmsg("Closing ACKTRACK\n");
+            logmsg("Closing ACKTRACK");
         if (acktrack->caps)
             free(acktrack->caps);
         free(acktrack);
@@ -128,19 +152,19 @@ u_int relseq(acktrack_t *acktrack, u_int absseq, int islseq)
     return absseq;
 }
 
-int CDECL acktrack_openlog(char* logfile)
+int CDECL acktrack_openlog(const char* logfile)
 {
     lfp = fopen(logfile, "w");
     if (lfp == NULL)
         return 0;
     else
-        logmsg("log file opened\n");
+        logmsg("log file opened");
         return 1;
 }
 
 void CDECL acktrack_writelog(char* msg)
 {
-    logmsg("APP: %s\n", msg);
+    logmsg("APP: %s", msg);
 }
 
 void CDECL acktrack_closelog(void)
@@ -154,7 +178,7 @@ int CDECL acktrack_isfinishing(acktrack_t *acktrack)
     if (!acktrack)
         return 1;
     int ret = (acktrack->gotlfin || acktrack->gotrfin || acktrack->gotrst);
-    logmsg("acktrack_isfinishing: %d%d%d = %d\n", acktrack->gotlfin, acktrack->gotrfin, acktrack->gotrst, ret);
+    logmsg("acktrack_isfinishing: %d%d%d = %d", acktrack->gotlfin, acktrack->gotrfin, acktrack->gotrst, ret);
     return ret;
 }
 
@@ -163,7 +187,7 @@ int CDECL acktrack_isfinished(acktrack_t *acktrack)
     if (!acktrack)
         return 1;
     int ret = (acktrack->gotlfin && acktrack->gotrfin && acktrack->lastlack > acktrack->lfinseq&& acktrack->lastrack > acktrack->rfinseq) || acktrack->gotrst;
-    logmsg("acktrack_isfinished: %d%d%d%d%d = %d\n", acktrack->gotlfin, acktrack->gotrfin, acktrack->lastlack > acktrack->lfinseq, acktrack->lastrack > acktrack->rfinseq, acktrack->gotrst, ret);
+    logmsg("acktrack_isfinished: %d%d%d%d%d = %d", acktrack->gotlfin, acktrack->gotrfin, acktrack->lastlack > acktrack->lfinseq, acktrack->lastrack > acktrack->rfinseq, acktrack->gotrst, ret);
     return ret;
 }
 
@@ -214,11 +238,10 @@ void CDECL acktrack_parsepacket(acktrack_t* acktrack, const struct pcap_pkthdr* 
     if (orfw & FINFLAG)
         datalen++;
 
-    logmsg("acktrack_parsepacket(): %s:%d -> ", inet_ntoa(ih->saddr), ntohs(th->sport));
-    logmsg("%s:%d.\n", inet_ntoa(ih->daddr), ntohs(th->dport));
+    logmsg("acktrack_parsepacket(): %s:%d -> %s:%d", inet_ntoa(ih->saddr), ntohs(th->sport), inet_ntoa(ih->daddr), ntohs(th->dport));
 
     if (!acktrack->gotorigpkt) {
-        logmsg("   --> Original packet.  Source deemed local.\n");
+        logmsg("   --> Original packet.  Source deemed local.");
         memcpy(&acktrack->laddr, &ih->saddr, sizeof(struct in_addr));
         memcpy(&acktrack->raddr, &ih->daddr, sizeof(struct in_addr));
         acktrack->lport = htons(th->sport);
@@ -286,7 +309,7 @@ void CDECL acktrack_parsepacket(acktrack_t* acktrack, const struct pcap_pkthdr* 
         event_data->seqno = relseqno + datalen;
         event_data->is_interesting = 1;
     }
-    logmsg("   --> is_local=%d seqno=%d is_interesting=%d, len=%d\n", event_data->is_local, event_data->seqno, event_data->is_interesting, datalen);
+    logmsg("   --> is_local=%d seqno=%d is_interesting=%d, len=%d", event_data->is_local, event_data->seqno, event_data->is_interesting, datalen);
 
 }
 
@@ -332,7 +355,7 @@ sequence_event_t *acktrack_next(acktrack_t *acktrack)
 
 
     if (acktrack == NULL) {
-        logmsg("ACKTRACK_NEXT CALLED ON NULL ACKTRACK\n");
+        logmsg("ACKTRACK_NEXT CALLED ON NULL ACKTRACK");
         return NULL;
     }
 
@@ -349,15 +372,15 @@ sequence_event_t *acktrack_next(acktrack_t *acktrack)
         result = pcap_next_ex(*acktrack->curcap, &pkthdr, &packet);
         switch (result) {
         case 0: // timeout expired
-            logmsg("ACKTRACK_NEXT: timeout expired\n");
+            logmsg("ACKTRACK_NEXT: timeout expired");
             ret.is_interesting = 0;
             break;
         case 1: // Got a packet
-            logmsg("ACKTRACK_NEXT: GOT A PACKET\n");
+            logmsg("ACKTRACK_NEXT: GOT A PACKET");
             acktrack_parsepacket(acktrack, pkthdr, packet, &ret);
             break;
         case PCAP_ERROR: // got an error
-            logmsg("ACKTRACK_NEXT: GOT AN ERROR\n");
+            logmsg("ACKTRACK_NEXT: GOT AN ERROR");
             ret.is_error = 1;
             ret.is_interesting = 0;
             break;
@@ -408,7 +431,7 @@ acktrack_t *acktrack_openallinterfaces(char *filter)
     acktrack_t *ret;
     char errbuf[PCAP_ERRBUF_SIZE];
 
-    logmsg("Filter: %s\n", filter);
+    logmsg("Filter: %s", filter);
 
     if (pcap_findalldevs(&alldevs, errbuf) == -1)
         return NULL;
@@ -573,7 +596,7 @@ acktrack_t *acktrack_create(int sck) // no errbuf
     */
 
 
-    logmsg("Log file opened\n");
+    logmsg("Log file opened");
 
 /*
 acktrack.cpp: In function ‘acktrack_t* acktrack_create(int)’:
@@ -589,12 +612,12 @@ acktrack.cpp:569:68: error: invalid conversion from ‘int*’ to ‘socklen_t* 
         
         if (errno == ENOTCONN)
             // Gotta connect before trying this, or we don't have two endpoints to bind to
-            logmsg("Socket isn't connected\n");
+            logmsg("Socket isn't connected");
         else if (errno == EBADF)
             // this integer not returned from socket(), or close() has been called on it
-            logmsg("Bad socket descriptor\n");
+            logmsg("Bad socket descriptor");
         else
-            logmsg("Determining socket type: %s\n", acktrack_error());
+            logmsg("Determining socket type: %s", acktrack_error());
         
         return NULL;
     }
@@ -611,18 +634,18 @@ acktrack.cpp:569:68: error: invalid conversion from ‘int*’ to ‘socklen_t* 
     if (r == -1) {
         if (errno == ENOTCONN)
             // Gotta connect before trying this, or we don't have two endpoints to bind to
-            logmsg("Socket isn't connected\n");
+            logmsg("Socket isn't connected");
         else if (errno == EBADF)
             // this integer not returned from socket(), or close() has been called on it
-            logmsg("Bad socket descriptor\n");
+            logmsg("Bad socket descriptor");
         else
-            logmsg("Getting remote endpoint: %s\n", acktrack_error());
+            logmsg("Getting remote endpoint: %s", acktrack_error());
 
         return NULL;
         }
 
     if (raddr.sin_family != AF_INET) {
-        logmsg("Socket is not ipv4\n");
+        logmsg("Socket is not ipv4");
         return NULL;
     }
 
@@ -631,12 +654,12 @@ acktrack.cpp:569:68: error: invalid conversion from ‘int*’ to ‘socklen_t* 
     if (r == -1) {
         if (errno == ENOTCONN)
             // Gotta connect before trying this, or we don't have two endpoints to bind to
-            logmsg("Socket isn't connected\n");
+            logmsg("Socket isn't connected");
         else if (errno == EBADF)
             // this integer not returned from socket(), or close() has been called on it
-            logmsg("Bad socket descriptor\n");
+            logmsg("Bad socket descriptor");
         else
-            logmsg("Getting local endpoint: %s\n", acktrack_error());
+            logmsg("Getting local endpoint: %s", acktrack_error());
 
         return NULL;
         }
@@ -692,7 +715,7 @@ typedef struct sequence_event {
 long CDECL acktrack_se_ts_sec(sequence_event_t *se)
 {
     if (!se) {
-        logmsg("SEQUENCE_EVENT_TS_SEC CALLED ON NULL SEQUENCE_EVENT\n");
+        logmsg("SEQUENCE_EVENT_TS_SEC CALLED ON NULL SEQUENCE_EVENT");
         return 0;
     }
     return se->ts.tv_sec;
@@ -701,7 +724,7 @@ long CDECL acktrack_se_ts_sec(sequence_event_t *se)
 long CDECL acktrack_se_ts_usec(sequence_event_t *se)
 {
     if (!se) {
-        logmsg("SEQUENCE_EVENT_TS_USEC CALLED ON NULL SEQUENCE_EVENT\n");
+        logmsg("SEQUENCE_EVENT_TS_USEC CALLED ON NULL SEQUENCE_EVENT");
         return 0;
     }
     return se->ts.tv_usec;
@@ -715,7 +738,7 @@ u_int CDECL acktrack_se_is_local(sequence_event_t *se)
     // printf("[%d]\n", se);
 
     if (!se) {
-        logmsg("SEQUENCE_EVENT_IS_LOCAL CALLED ON NULL SEQUENCE_EVENT\n");
+        logmsg("SEQUENCE_EVENT_IS_LOCAL CALLED ON NULL SEQUENCE_EVENT");
         return 0;
     }
     return se->is_local;
@@ -724,7 +747,7 @@ u_int CDECL acktrack_se_is_local(sequence_event_t *se)
 u_int CDECL acktrack_se_seqno(sequence_event_t *se)
 {
     if (!se) {
-        logmsg("SEQUENCE_EVENT_SEQNO CALLED ON NULL SEQUENCE_EVENT\n");
+        logmsg("SEQUENCE_EVENT_SEQNO CALLED ON NULL SEQUENCE_EVENT");
         return 0;
     }
     return se->seqno;
@@ -740,7 +763,7 @@ u_int CDECL acktrack_se_is_interesting(sequence_event_t *se)
     }
     */
     if (!se) {
-        logmsg("SEQUENCE_EVENT_IS_INTERESTING CALLED ON NULL SEQUENCE_EVENT\n");
+        logmsg("SEQUENCE_EVENT_IS_INTERESTING CALLED ON NULL SEQUENCE_EVENT");
         return 0;
     }
     return se->is_interesting;
@@ -749,7 +772,7 @@ u_int CDECL acktrack_se_is_interesting(sequence_event_t *se)
 u_int CDECL acktrack_se_is_error(sequence_event_t *se)
 {
     if (!se) {
-        logmsg("SEQUENCE_EVENT_IS_ERROR CALLED ON NULL SEQUENCE_EVENT\n");
+        logmsg("SEQUENCE_EVENT_IS_ERROR CALLED ON NULL SEQUENCE_EVENT");
         return 0;
     }
     return se->is_error;
