@@ -118,17 +118,16 @@ void logmsg(const char *fmt, ...)
 
     time_t dt;
 
-    dt = time(NULL);
-    
-
-    strftime(now, 26, "%Y-%m-%d %H:%M:%S", localtime(&dt));
-
-    va_start(args, fmt);
-    fprintf(lfp, "%s: ", now);
-    vfprintf(lfp, fmt, args);
-    fprintf(lfp, "\n");
-    fflush(lfp);
-    va_end(args);
+    if (lfp) {
+        dt = time(NULL);
+        strftime(now, 26, "%Y-%m-%d %H:%M:%S", localtime(&dt));
+        va_start(args, fmt);
+        fprintf(lfp, "%s: ", now);
+        vfprintf(lfp, fmt, args);
+        fprintf(lfp, "\n");
+        fflush(lfp);
+        va_end(args);
+        }
 }
 
 void CDECL acktrack_free(acktrack_t* acktrack)
