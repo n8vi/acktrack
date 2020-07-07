@@ -78,8 +78,7 @@ pages:
   script:
   - cp libacktrack.so public/
   - cp Debug/acktrack.dll public/
-  - echo test > public/`date +%s`
-  - ls -la public/ > public/file_list
+  - echo "document.write('`date`');" > lastmodified.js
   artifacts:
     paths:
     - public
