@@ -78,7 +78,7 @@ pages:
   script:
   - cp libacktrack.so public/
   - cp Debug/acktrack.dll public/
-  - echo "document.write('`git log -1 --pretty='%h %ad %B'`');" > public/lastupdate.js
+  - echo "document.write('`git log -1 --pretty='%h (%ad): %B'`');" > public/lastupdate.js
   artifacts:
     paths:
     - public
