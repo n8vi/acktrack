@@ -63,54 +63,6 @@ typedef struct tcp_header{
 #define ACKFLAG (1<<20)
 #define URGFLAG (1<<21)
 
-char* CDECL acktrack_flagstr(u_int flags)
-{
-    static char ret[7] = "------";
-
-    // ret[6] = '\0';
-
-
-    if (flags & FINFLAG) {
-        ret[5] = 'F';
-    }
-    else {
-        ret[5] = '-';
-    }
-    if (flags & SYNFLAG) {
-        ret[4] = 'S';
-    }
-    else {
-        ret[4] = '-';
-    }
-    if (flags & RSTFLAG) {
-        ret[3] = 'R';
-    }
-    else {
-        ret[3] = '-';
-    }
-    if (flags & PSHFLAG) {
-        ret[2] = 'P';
-    }
-    else {
-        ret[2] = '-';
-    }
-    if (flags & ACKFLAG) {
-        ret[1] = 'A';
-    }
-    else {
-        ret[1] = '-';
-    }
-    if (flags & URGFLAG) {
-        ret[0] = 'U';
-    }
-    else {
-        ret[0] = '-';
-    }
-    return ret;
-}
-
-// #define logmsg(fmt, ...) if (lfp) {fprintf(lfp, fmt, ##__VA_ARGS__); fflush(lfp);}
-
 void logmsg(const char *fmt, ...)
 {
     char now[26];
@@ -172,6 +124,35 @@ void CDECL acktrack_closelog(void)
         fclose(lfp);
 }
 
+unsigned int CDECL acktrack_lastrseq(acktrack_t *acktrack)
+{
+    if (!acktrack)
+        return 0;
+    return acktrack->lastrseq;
+}
+
+unsigned int CDECL acktrack_lastlseq(acktrack_t *acktrack)
+{
+    if (!acktrack)
+        return 0;
+    return acktrack->lastlseq;
+}
+
+unsigned int CDECL acktrack_lastrack(acktrack_t *acktrack)
+{
+    if (!acktrack)
+        return 0;
+    return acktrack->lastrack;
+}
+
+unsigned int CDECL acktrack_lastlack(acktrack_t *acktrack)
+{
+    if (!acktrack)
+        return 0;
+    return acktrack->lastlack;
+}
+
+
 int CDECL acktrack_isfinishing(acktrack_t *acktrack)
 {
     if (!acktrack)
@@ -232,10 +213,26 @@ void CDECL acktrack_parsepacket(acktrack_t* acktrack, const struct pcap_pkthdr* 
     tcp_len = ((orfw & 0xf0000000) >> 28) * 4;
     datalen = ntohs(ih->tlen) - tcp_len - ip_len;
 
-    if (orfw & SYNFLAG)
+    if (orfw & FINFLAG) {
         datalen++;
-    if (orfw & FINFLAG)
+        event_data->has_fin = 1;
+    }
+    if (orfw & SYNFLAG) {
         datalen++;
+        event_data->has_syn = 1;
+    }
+    if (orfw & RSTFLAG) {
+        event_data->has_rst = 1;
+    }
+    if (orfw & PSHFLAG) {
+        event_data->has_psh = 1;
+    }
+    if (orfw & ACKFLAG) {
+        event_data->has_ack = 1;
+    }
+    if (orfw & URGFLAG) {
+        event_data->has_urg = 1;
+    }
 
     logmsg("acktrack_parsepacket(): %s:%d -> %s:%d", inet_ntoa(ih->saddr), ntohs(th->sport), inet_ntoa(ih->daddr), ntohs(th->dport));
 
@@ -775,4 +772,58 @@ u_int CDECL acktrack_se_is_error(sequence_event_t *se)
         return 0;
     }
     return se->is_error;
+}
+
+u_int CDECL acktrack_se_has_urg(sequence_event_t *se)
+{
+    if (!se) {
+        logmsg("SEQUENCE_EVENT_HAS_URG CALLED ON NULL SEQUENCE_EVENT");
+        return 0;
+    }
+    return se->has_urg;
+}
+
+u_int CDECL acktrack_se_has_ack(sequence_event_t *se)
+{
+    if (!se) {
+        logmsg("SEQUENCE_EVENT_HAS_ACK CALLED ON NULL SEQUENCE_EVENT");
+        return 0;
+    }
+    return se->has_ack;
+}
+
+u_int CDECL acktrack_se_has_psh(sequence_event_t *se)
+{
+    if (!se) {
+        logmsg("SEQUENCE_EVENT_HAS_PSH CALLED ON NULL SEQUENCE_EVENT");
+        return 0;
+    }
+    return se->has_psh;
+}
+
+u_int CDECL acktrack_se_has_rst(sequence_event_t *se)
+{
+    if (!se) {
+        logmsg("SEQUENCE_EVENT_HAS_RST CALLED ON NULL SEQUENCE_EVENT");
+        return 0;
+    }
+    return se->has_rst;
+}
+
+u_int CDECL acktrack_se_has_syn(sequence_event_t *se)
+{
+    if (!se) {
+        logmsg("SEQUENCE_EVENT_HAS_SYN CALLED ON NULL SEQUENCE_EVENT");
+        return 0;
+    }
+    return se->has_syn;
+}
+
+u_int CDECL acktrack_se_has_fin(sequence_event_t *se)
+{
+    if (!se) {
+        logmsg("SEQUENCE_EVENT_HAS_FIN CALLED ON NULL SEQUENCE_EVENT");
+        return 0;
+    }
+    return se->has_fin;
 }

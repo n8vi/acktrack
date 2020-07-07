@@ -64,6 +64,12 @@ typedef struct sequence_event {
     u_int seqno;
     u_char is_interesting;
     u_char is_error;
+    u_char has_urg;
+    u_char has_ack;
+    u_char has_psh;
+    u_char has_rst;
+    u_char has_syn;
+    u_char has_fin;
 } sequence_event_t;
 
 /* The following struct may be subject to change */
@@ -106,6 +112,11 @@ extern "C" ACKTRACK_API void CDECL acktrack_writelog(char* msg);
 extern "C" ACKTRACK_API void CDECL acktrack_closelog(void);
 extern "C" ACKTRACK_API char* CDECL acktrack_error(void);
 
+extern "C" ACKTRACK_API u_int CDECL acktrack_lastrseq(acktrack_t *acktrack);
+extern "C" ACKTRACK_API u_int CDECL acktrack_lastlseq(acktrack_t *acktrack);
+extern "C" ACKTRACK_API u_int CDECL acktrack_lastrack(acktrack_t *acktrack);
+extern "C" ACKTRACK_API u_int CDECL acktrack_lastlack(acktrack_t *acktrack);
+
 // For VB ...
 // Public Declare Ansi Function acktrack_create_fromstrings Lib "acktrack.dll" Alias "acktrack_create_fromstrings" (ByVal LocalEndPointStr As String, ByVal RemoteEndPointStr As String) As IntPtr
 // cs = acktrack_create_fromstrings(socket.LocalEndPoint.ToString(), socket.RemoteEndPoint.ToString());
@@ -117,4 +128,11 @@ extern "C" ACKTRACK_API u_int CDECL acktrack_se_is_local(sequence_event_t *se);
 extern "C" ACKTRACK_API u_int CDECL acktrack_se_seqno(sequence_event_t *se);
 extern "C" ACKTRACK_API u_int CDECL acktrack_se_is_interesting(sequence_event_t *se);
 extern "C" ACKTRACK_API u_int CDECL acktrack_se_is_error(sequence_event_t *se);
+
+extern "C" ACKTRACK_API u_int CDECL acktrack_se_has_urg(sequence_event_t *se);
+extern "C" ACKTRACK_API u_int CDECL acktrack_se_has_ack(sequence_event_t *se);
+extern "C" ACKTRACK_API u_int CDECL acktrack_se_has_psh(sequence_event_t *se);
+extern "C" ACKTRACK_API u_int CDECL acktrack_se_has_rst(sequence_event_t *se);
+extern "C" ACKTRACK_API u_int CDECL acktrack_se_has_syn(sequence_event_t *se);
+extern "C" ACKTRACK_API u_int CDECL acktrack_se_has_fin(sequence_event_t *se);
 
