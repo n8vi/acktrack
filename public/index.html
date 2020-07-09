@@ -62,7 +62,7 @@ different levels of logging or anything, this is quite verbose.  Here's the func
 <li style="margin-top:0px;font-family: 'Courier New', Courier, monospace">void acktrack_closelog(void)</li>
 </ul>
 
-<h4>Opening and closing an ack tracker<h4>
+<h4>Opening and closing an ack tracker</h4>
 acktrack_create() creates an acktrack_t object, which you can pass into later functions.
 <ul>
 <li style="margin-top:0px;font-family: 'Courier New', Courier, monospace">acktrack_t * acktrack_create(int sck);</li>
@@ -94,8 +94,8 @@ source code you can refer to for how to use that, but here's a gist:
 
 <ul>
 <li style="margin-top:0px;font-family: 'Courier New', Courier, monospace">
-acktrack_t * acktrack_create_fromstrings(char* LocalEndPointStr, char* RemoteEndPointStr);
-// Public Declare Ansi Function acktrack_create_fromstrings Lib "acktrack.dll" Alias "acktrack_create_fromstrings" (ByVal LocalEndPointStr As String, ByVal RemoteEndPointStr As String) As IntPtr
+acktrack_t * acktrack_create_fromstrings(char* LocalEndPointStr, char* RemoteEndPointStr) <br/>
+// Public Declare Ansi Function acktrack_create_fromstrings Lib "acktrack.dll" Alias "acktrack_create_fromstrings" (ByVal LocalEndPointStr As String, ByVal RemoteEndPointStr As String) As IntPtr <br/>
 // cs = acktrack_create_fromstrings(socket.LocalEndPoint.ToString(), socket.RemoteEndPoint.ToString());
 </li>
 </ul>
