@@ -34,5 +34,97 @@ Archived old versions of binaries will be downloadable ... at some point.  Sourc
 <a href="https://gitlab.com/n8vi/acktrack">https://gitlab.com/n8vi/acktrack</a>, and you can find old versions in 
 the CI artifacts if you care to dig.
 
+<h3>&quot;Documentation&quot;</h3>
+
+<h4>Purpose</h4>
+The general idea of the acktrack library is to get information about a TCP session you are engaged in either before your
+operating system's socket library is willing to give it to you, or in the case the socket library doesn't provide said information.
+
+The original use case was to figure out how much of the data you've sent to the remote end has been acknowledged.  This is done
+by opening an acktrack object and either periodically checking lastlseq vs lastlack (if they are equal, then everything you've sent
+has been acknowledged).  Perhaps you're working with an application-layer protocol that needs to time out when a packet isn't
+acknowledged and for whatever reason you don't want to do acknowledgements in the application layer?  
+
+A second use case that's cropped up is figuring out when the TCP session is in the process of ending before your socket library
+wants you to know.  If your code's left hand isn't fully clear on what its right hand is up to, perhaps this is a way to determine
+the socket is closing but the whole FIN/FINACK sequence isn't complete yet.
+
+<h4>Logging functions</h4>
+The acktrack library can log to a file for debugging if the application so desires.  The application may write its own messages
+to this log for basic "printf-style" debugging.  The logfile can be opened with acktrack_openlog(), should be closed with 
+acktrack_closelog(), and application messages are logged with acktrack_writelog().  Most likely, if your application calls
+acktrack_openlog(), you'll see a lot more messages from within the library than from your own code.  I don't implement 
+different levels of logging or anything, this is quite verbose.  Here's the function prototypes:
+
+<ul>
+<li><font face="courier">int  acktrack_openlog(const char* logfile)</font></li>
+<li><font face="courier">void acktrack_writelog(char* msg)</font></li>
+<li><font face="courier">void acktrack_closelog(void)</font></li>
+</ul>
+
+<h4>Opening and closing an ack tracker<h4>
+acktrack_create() creates an acktrack_t object, which you can pass into later functions.
+<ul>
+<li>acktrack_t * acktrack_create(int sck);</li>
+<li>void acktrack_free(acktrack_t *acktrack);</li>
+</ul>
+
+<h4>Operating the packet loop</h4>
+There are two ways to consume packets from the buffer.  If you don't do either of these <i>nothing will happen</i>.  Acktrack_dispatch()
+calls your callback cb with the next available packet, whereas acktrack_next() returns the next available packet.  Use whichever is
+convenient.  The packet data is returned as a sequence_event_t object, which you can operate on with functions I shall describe shortly.
+<ul>
+<li><font face="courier">void acktrack_dispatch(acktrack_t * acktrack, acktrack_cb_t cb)</font></li>
+<li><font face="courier">sequence_event_t * acktrack_next(acktrack_t * acktrack)</font></li>
+</ul>
+
+<h4>Looking for session termination</h4>
+acktrack_isfinishing() returns 1 if either a FIN or RST has been received from either side.
+acktrack_isfinished() returns 1 if either the full session teardown has taken place with FIN flags, or if an RST has been sent or received.
+<ul>
+<li><font face="courier">int acktrack_isfinished(acktrack_t *acktrack)</font></li>
+<li><font face="courier">int acktrack_isfinishing(acktrack_t *acktrack)</font></li>
+</ul>
+
+<h4>Visual Basic convenience functions</h4>
+It turns out to be quite difficult to figure out how to get at C struct members using visual basic, so I made some functions that just return members 
+of the structs this library slings around.  It also turns out to be difficult to get at your actual socket handle in visual basic, so I gave up and 
+made a variant of acktrack_create() that can take a string describing the connection you wish to monitor.  There is a visual basic example in the 
+source code you can refer to for how to use that, but here's a gist:
+
+<ul>
+<li><font face="courier">
+acktrack_t * acktrack_create_fromstrings(char* LocalEndPointStr, char* RemoteEndPointStr);
+// Public Declare Ansi Function acktrack_create_fromstrings Lib "acktrack.dll" Alias "acktrack_create_fromstrings" (ByVal LocalEndPointStr As String, ByVal RemoteEndPointStr As String) As IntPtr
+// cs = acktrack_create_fromstrings(socket.LocalEndPoint.ToString(), socket.RemoteEndPoint.ToString());
+</font></li>
+</ul>
+
+What remains are the VB convenience functions for getting at the data locked up in those structs.  Functions named acktrack_se_something() are for
+poking at the contents of sequence_event_t structs (representing individual packets), whereas functions named just acktrack_something() are for
+poking at acktrack_t structs (representing TCP sessions).
+
+<ul>
+<li><font face="courier">u_int acktrack_lastrseq(acktrack_t *acktrack)</font></li>
+<li><font face="courier">u_int acktrack_lastlseq(acktrack_t *acktrack)</font></li>
+<li><font face="courier">u_int acktrack_lastrack(acktrack_t *acktrack)</font></li>
+<li><font face="courier">u_int acktrack_lastlack(acktrack_t *acktrack)</font></li>
+</ul>
+
+<ul>
+<li><font face="courier">long acktrack_se_ts_sec(sequence_event_t *se)</font></li>
+<li><font face="courier">long acktrack_se_ts_usec(sequence_event_t *se)</font></li>
+<li><font face="courier">u_int acktrack_se_is_local(sequence_event_t *se)</font></li>
+<li><font face="courier">u_int acktrack_se_seqno(sequence_event_t *se)</font></li>
+<li><font face="courier">u_int acktrack_se_is_interesting(sequence_event_t *se)</font></li>
+<li><font face="courier">u_int acktrack_se_is_error(sequence_event_t *se)</font></li>
+<li><font face="courier">u_int acktrack_se_has_urg(sequence_event_t *se)</font></li>
+<li><font face="courier">u_int acktrack_se_has_ack(sequence_event_t *se)</font></li>
+<li><font face="courier">u_int acktrack_se_has_psh(sequence_event_t *se)</font></li>
+<li><font face="courier">u_int acktrack_se_has_rst(sequence_event_t *se)</font></li>
+<li><font face="courier">u_int acktrack_se_has_syn(sequence_event_t *se)</font></li>
+<li><font face="courier">u_int acktrack_se_has_fin(sequence_event_t *se)</font></li>
+</ul>
+
 </body>
 </html>
