@@ -26,12 +26,14 @@
 static FILE* lfp = 0;
 
 /* 4 bytes IP address */
-typedef struct ip_address{
-    u_char byte1;
+typedef struct ip_address{  // thankfully this doesn't seem to be used anywhere
+    u_char byte1;           // so isn't a problem for adding ipv6
     u_char byte2;
     u_char byte3;
     u_char byte4;
 }ip_address;
+
+// need to add struct ip6_header for ipv6
 
 /* IPv4 header */
 typedef struct ip_header{
@@ -191,6 +193,16 @@ void CDECL acktrack_parsepacket(acktrack_t* acktrack, const struct pcap_pkthdr* 
     u_char *magic;
 
     bzero(event_data, sizeof(sequence_event_t));
+
+    // The "magic" here deals with ethernet captures (ethernet header followed by ip header, etc)
+    // vs loopback captures (no ethernet header).  This is a fairly terrible way to handle this
+    // and probably should be rethought before doing ipv6.  I'm guessing the right way to do this
+    // involves some field in struct pcap_pkthdr.
+
+    // Additional magic may be required here to handle skipping past ipv6 headers into the transport
+    // layer header.  IPv6 has no IHL field.  You may read that IPv6 packets have a fixed 40-octet
+    // header. That's nice, right?  Well, that's true only if the packet has no options.  And you
+    // can only figure out options by looking at the "next header" field.  More reading required ...
 
     magic = (u_char*)(packet + 4);
 
@@ -421,7 +433,7 @@ acktrack_t *acktrack_openallinterfaces(char *filter)
     pcap_if_t *p = NULL;
     int i=0;
     int c=0;
-    int has_ipv4_addr;
+    int has_ipv4_addr;  // will need "has_ipv6_addr" or similar to add ipv6 functionality
     pcap_t **descr;
     struct bpf_program fp;
     acktrack_t *ret;
@@ -573,7 +585,7 @@ acktrack_t *acktrack_create(int sck) // no errbuf
     const char rdest[50] = "";
     int type;
     socklen_t typelen = sizeof(type);
-    const char filter[201] = "";
+    const char filter[201] = ""; // Will need to enlarge filter size to accomodate ipv6
 
 /**************************************************************************************[ maximum possible filter size ]****************************************************************************************\
                                                                                                        1         1         1         1         1         1         1         1         1         1         2
@@ -640,7 +652,7 @@ acktrack.cpp:569:68: error: invalid conversion from ‘int*’ to ‘socklen_t* 
         return NULL;
         }
 
-    if (raddr.sin_family != AF_INET) {
+    if (raddr.sin_family != AF_INET) { // We will need to update this to add ipv6
         logmsg("Socket is not ipv4");
         return NULL;
     }
@@ -663,22 +675,22 @@ acktrack.cpp:569:68: error: invalid conversion from ‘int*’ to ‘socklen_t* 
 
     // inet_ntoa returns a static buffer so we can't just do this all at once 
     sprintf((char*)rsource, "src host %s and src port %d", 
-        (char*)inet_ntoa(raddr.sin_addr), 
+        (char*)inet_ntoa(raddr.sin_addr),  // inet_ntoa will not work for ipv6
         ntohs(raddr.sin_port)
         );
 
     sprintf((char*)ldest, "dst host %s and dst port %d", 
-        (char*)inet_ntoa(laddr.sin_addr), 
+        (char*)inet_ntoa(laddr.sin_addr),  // inet_ntoa will not work for ipv6
         ntohs(laddr.sin_port)
         );
 
     sprintf((char*)lsource, "src host %s and src port %d", 
-        (char*)inet_ntoa(laddr.sin_addr), 
+        (char*)inet_ntoa(laddr.sin_addr),  // inet_ntoa will not work for ipv6
         ntohs(laddr.sin_port)
         );
 
     sprintf((char*)rdest, "dst host %s and dst port %d", 
-        (char*)inet_ntoa(raddr.sin_addr), 
+        (char*)inet_ntoa(raddr.sin_addr),  // inet_ntoa will not work for ipv6
         ntohs(raddr.sin_port)
         );
 
