@@ -74,8 +74,8 @@ typedef struct sequence_event {
 
 /* The following struct may be subject to change */
 typedef struct acktrack_t{
-    struct in_addr laddr;        /* local IP address  */
-    struct in_addr raddr;        /* remote IP address */
+    struct in_addr laddr;        /* local IP address  */  /* this is a problem for ipv6, obv */
+    struct in_addr raddr;        /* remote IP address */  /* this is a problem for ipv6, obv */
     u_short lport;               /* local TCP port    */
     u_short rport;               /* remote TCP port   */
     u_int lseqorig;                /* Local initial sequence number SEE ABOVE */
