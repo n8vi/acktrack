@@ -3,24 +3,25 @@
 <title>The ACKTRACK library</title>
 </head>
 <body>
-<h1>The ACKTRACK library</h1>
-<p>
+<table border=0><tr><td>
+<h1>
+<img src="acktrack.png" align=left>
+<br/>
+The ACKTRACK library
+</h1>
 This is the home of the ACKTRACK library, useful for watching acknowledgements to TCP sessions your software is engaged in.
 You can initialize an ACK tracker by passing a socket handle, or by passing strings describing each end of the connection.
-The library is cross-platform, and is built on Linux and Windows using gitlab CI.  Documentation is not complete yet, which
-is to say that for the most part, the documentation is the fairly messy source code.  That will be cleaned up.  However ...
-</p><p>
+The library is cross-platform, and is built on Linux and Windows using gitlab CI.  
 
 <strike>The funding for this project is temporarily suspended due to COVID-19.  While I intend to continue work on the library, I can 
-make no guarantees of how quickly updates will occur.</strike>
+make no guarantees of how quickly updates will occur.</strike><br/>
 Development is back on!
-</p>
-
+</td></tr></table>
 
 <h3>Downloads</h3>
 The binaries gitlab-ci has compiled from the latest master branch are available here.
 <pre>
-<script src="lastupdate.js"></script>
+Last Commit: <script src="lastupdate.js"></script>
 </pre>
 <ul>
 <li style="margin-top:0px;font-family: 'Courier New', Courier, monospace"><a href="acktrack.dll">acktrack.dll</a> - Windows, I think 32-bit, but I haven't verified.</li>
@@ -33,8 +34,10 @@ for windows, since the user will have to manually install the npcap library depe
 Archived old versions of binaries will be downloadable ... at some point.  Source code can always be retrieved from
 <a href="https://gitlab.com/n8vi/acktrack">https://gitlab.com/n8vi/acktrack</a>, and you can find old versions in 
 the CI artifacts if you care to dig.
+<br/><br/>
 
 <h3>&quot;Documentation&quot;</h3>
+(now with 100% more scare quotes)
 
 <h4>Purpose</h4>
 The general idea of the acktrack library is to get information about a TCP session you are engaged in either before your
@@ -89,7 +92,7 @@ acktrack_isfinished() returns 1 if either the full session teardown has taken pl
 <h4>Visual Basic convenience functions</h4>
 It turns out to be quite difficult to figure out how to get at C struct members using visual basic, so I made some functions that just return members 
 of the structs this library slings around.  It also turns out to be difficult to get at your actual socket handle in visual basic, so I gave up and 
-made a variant of acktrack_create() that can take a string describing the connection you wish to monitor.  There is a visual basic example in the 
+made a variant of acktrack_create() that can take a pair of strings describing the connection you wish to monitor.  There is a visual basic example in the 
 source code you can refer to for how to use that, but here's a gist:
 
 <ul>
