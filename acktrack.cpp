@@ -206,6 +206,9 @@ void CDECL acktrack_parsepacket(acktrack_t* acktrack, const struct pcap_pkthdr* 
     // header. That's nice, right?  Well, that's true only if the packet has no options.  And you
     // can only figure out options by looking at the "next header" field.  More reading required ...
 
+    // https://www.tcpdump.org/pcap.html (search in page for "assumes ethernet headers"
+    // https://www.tcpdump.org/linktypes.html
+
     magic = (u_char*)(packet + 4);
 
     if (((*magic) & 0xf0) != 0x40)
