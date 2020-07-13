@@ -329,10 +329,10 @@ void CDECL acktrack_parsepacket(acktrack_t* acktrack, const struct pcap_pkthdr* 
 void CDECL acktrack_callback(u_char* user, const struct pcap_pkthdr* pkthdr, const u_char* packet)
 {
     sequence_event_t event_data;
-    acktrack_t* acktrack = (acktrack_t*)user;
+    acktrack_t* acktrack = (acktrack_t*)user;  /* TODO: this should contain an acktrack AND a headerlength */
     acktrack_cb_t cb = (acktrack_cb_t)acktrack->cb;
 
-    acktrack_parsepacket(acktrack, pkthdr, packet, &event_data);
+    acktrack_parsepacket(acktrack, pkthdr, packet, &event_data); /* TODO: pass in headerlength */
 
     if (event_data.is_interesting)
         cb(acktrack, &event_data);
@@ -359,7 +359,6 @@ sequence_event_t *acktrack_next(acktrack_t *acktrack)
     // and PCAP_ERROR_BREAK if packets are being read from a ``savefile''and there are no more packets to read from the savefile.
     // If PCAP_ERROR is returned, pcap_geterr(3PCAP) or pcap_perror(3PCAP) may be called with p as an argument to fetch or display the error text.
 
-    // static pcap_t **descr = NULL; /* TODO: Move to acktrack_t structure.  This breaks the ability to do multiple simultaneous captures.  */
     struct pcap_pkthdr *pkthdr;
     pcap_t *orig;
     const u_char* packet;
@@ -390,7 +389,7 @@ sequence_event_t *acktrack_next(acktrack_t *acktrack)
             break;
         case 1: // Got a packet
             logmsg("ACKTRACK_NEXT: GOT A PACKET");
-            acktrack_parsepacket(acktrack, pkthdr, packet, &ret);
+            acktrack_parsepacket(acktrack, pkthdr, packet, &ret); /* TODO: here we have a packet to parse and potentially know its header length */
             break;
         case PCAP_ERROR: // got an error
             logmsg("ACKTRACK_NEXT: GOT AN ERROR");
@@ -415,7 +414,7 @@ void CDECL acktrack_dispatch(acktrack_t* acktrack, acktrack_cb_t cb)
     descr = acktrack->caps;
 
     while (*descr) {
-        pcap_dispatch(*descr, -1, acktrack_callback, (u_char*)acktrack);
+        pcap_dispatch(*descr, -1, acktrack_callback, (u_char*)acktrack); /* TODO: replace acktrack parameter with something that contains the acktrack and headerlength based on interface */
         descr++;
     }
 }
