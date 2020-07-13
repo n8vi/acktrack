@@ -25,18 +25,7 @@
 
 static FILE* lfp = 0;
 
-/* 4 bytes IP address */
-/*
-typedef struct ip_address{  // thankfully this doesn't seem to be used anywhere
-    u_char byte1;           // so isn't a problem for adding ipv6
-    u_char byte2;
-    u_char byte3;
-    u_char byte4;
-}ip_address;
-*/
-
 // need to add struct ip6_header for ipv6
-
 /* IPv4 header */
 typedef struct ip_header{
     u_char  ver_ihl;        // Version (4 bits) + Internet header length (4 bits)
