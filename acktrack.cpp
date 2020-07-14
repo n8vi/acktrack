@@ -194,6 +194,7 @@ void CDECL acktrack_parsepacket(acktrack_t* acktrack, const struct pcap_pkthdr* 
     // layer header.  IPv6 has no IHL field.  You may read that IPv6 packets have a fixed 40-octet
     // header. That's nice, right?  Well, that's true only if the packet has no options.  And you
     // can only figure out options by looking at the "next header" field.  More reading required ...
+    // !!! answers may lie in rfc7045 !!!
 
     // https://www.tcpdump.org/pcap.html (search in page for "assumes ethernet headers"
     // https://www.tcpdump.org/linktypes.html
