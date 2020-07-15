@@ -185,19 +185,50 @@ void CDECL acktrack_parsepacket(acktrack_t* acktrack, const struct pcap_pkthdr* 
 
     bzero(event_data, sizeof(sequence_event_t));
 
-    // The "magic" here deals with ethernet captures (ethernet header followed by ip header, etc)
+    // TODO: The "magic" here deals with ethernet captures (ethernet header followed by ip header, etc)
     // vs loopback captures (no ethernet header).  This is a fairly terrible way to handle this
-    // and probably should be rethought before doing ipv6.  I'm guessing the right way to do this
-    // involves some field in struct pcap_pkthdr.
-
-    // Additional magic may be required here to handle skipping past ipv6 headers into the transport
-    // layer header.  IPv6 has no IHL field.  You may read that IPv6 packets have a fixed 40-octet
-    // header. That's nice, right?  Well, that's true only if the packet has no options.  And you
-    // can only figure out options by looking at the "next header" field.  More reading required ...
-    // !!! answers may lie in rfc7045 !!!
+    // and probably should be rethought before doing ipv6.
+    // I've marked all the things that need to change with "TODO" throughout the code.
 
     // https://www.tcpdump.org/pcap.html (search in page for "assumes ethernet headers"
     // https://www.tcpdump.org/linktypes.html
+
+    // =================================================================================================
+
+    // Additional magic may be required here to handle skipping past ipv6 headers into the transport
+    // layer header.  IPv6 has no IHL field.  You may read that IPv6 packets have a fixed 40-octet
+    // header. That's nice, right?  Well, that's true only if the packet has no iextension headers.
+    // And you can only figure out options by looking at the "next header" field.
+
+    // From RFC2460, the original IPv6 RFC, IPv6 extension headers are discussed as follows:
+
+/*
+   If, as a result of processing a header, a node is required to proceed
+   to the next header but the Next Header value in the current header is
+   unrecognized by the node, it should discard the packet and send an
+   ICMP Parameter Problem message to the source of the packet, with an
+   ICMP Code value of 1 ("unrecognized Next Header type encountered")
+   and the ICMP Pointer field containing the offset of the unrecognized
+   value within the original packet.  The same action should be taken if
+   a node encounters a Next Header value of zero in any header other
+   than an IPv6 header.
+*/
+
+    // This confirms my initial suspicion that IPv6 requires a stack implementation have perfect
+    // knowledge of all possible IPv6 options, including ones defined in the future, in order to
+    // operate correctly.  This is terrible, guys!
+    // RFC6564 helps a bit by defining a uniform TLV format for future headers, but ones defined 
+    // prior to this will not have this TLV format.  RFC7045 clears this up a bit but claims 
+
+/* 
+   The present document does not intend to solve this problem,
+   which is caused by the fundamental architecture of IPv6 extension
+   headers.  This document focuses on clarifying how the header chain
+   should be handled in the current IPv6 architecture.
+*/
+
+    // Now, clearly IPv6 is parsable, since wireshark can do it, but it requires a bit of a dance.
+
 
     magic = (u_char*)(packet + 4);
 
