@@ -115,6 +115,7 @@ void CDECL acktrack_closelog(void)
 {
     if (lfp)
         fclose(lfp);
+    lfp = (FILE*)0;
 }
 
 unsigned int CDECL acktrack_lastrseq(acktrack_t *acktrack)
