@@ -98,9 +98,9 @@ typedef struct acktrack_t {
     u_int lastlack;                /* the last ack we got */
     u_int lfinseq;                 /* the sequence number of our local FIN packet if gotlfin */
     u_int rfinseq;                 /* the sequence number of the FIN from the remote if gotrfin */
-    pcap_t **caps;               /* an array of pcap handles of all nterfaces with ipv4 on them */
+    acktrack_cap_t *caps;               /* an array of pcap handles of all nterfaces with ipv4 on them */
     u_char lastpktislocal;          /* nonzero if last packet seen was sent by us */
-    pcap_t** curcap;            /* current pcap_t handle used by acktrack_next() */
+    acktrack_cap_t *curcap;            /* current pcap_t handle used by acktrack_next() */
     void *cb;
 } acktrack_t;
 

@@ -382,7 +382,7 @@ sequence_event_t *acktrack_next(acktrack_t *acktrack)
     // If PCAP_ERROR is returned, pcap_geterr(3PCAP) or pcap_perror(3PCAP) may be called with p as an argument to fetch or display the error text.
 
     struct pcap_pkthdr *pkthdr;
-    pcap_t *orig;
+    acktrack_cap_t *orig;
     const u_char* packet;
     static sequence_event_t ret;
     int result;
@@ -393,17 +393,20 @@ sequence_event_t *acktrack_next(acktrack_t *acktrack)
         return NULL;
     }
 
-    if (acktrack->curcap == NULL || *acktrack->curcap == NULL)
+    if (acktrack->curcap == NULL || acktrack->curcap->handle == NULL)
         acktrack->curcap = acktrack->caps;
   
 
-    orig = *acktrack->curcap;
+    orig = acktrack->curcap;
 
     // Since we're not relying on an "any" interface, we go once around the 
     // circle of interfaces and stop if we find something interesting
 
     do {
-        result = pcap_next_ex(*acktrack->curcap, &pkthdr, &packet);
+        logmsg("pcap_next_ex(.%x)", acktrack);
+        logmsg("pcap_next_ex(..%x)", acktrack->curcap);
+        logmsg("pcap_next_ex(...%x)", acktrack->curcap->handle);
+        result = pcap_next_ex(acktrack->curcap->handle, &pkthdr, &packet);
         switch (result) {
         case 0: // timeout expired
             logmsg("ACKTRACK_NEXT: timeout expired");
@@ -420,23 +423,23 @@ sequence_event_t *acktrack_next(acktrack_t *acktrack)
             break;
         }
         acktrack->curcap++;
-        if (*acktrack->curcap == NULL)
+        if (acktrack->curcap->handle == NULL)
             acktrack->curcap = acktrack->caps;
-    } while (*acktrack->curcap != orig && !ret.is_interesting);
+    } while (acktrack->curcap != orig && !ret.is_interesting);
 
     return &ret;
 }
 
 void CDECL acktrack_dispatch(acktrack_t* acktrack, acktrack_cb_t cb)
 {
-    pcap_t** descr;
+    acktrack_cap_t* descr;
 
     acktrack->cb = (void*) cb;
 
     descr = acktrack->caps;
 
-    while (*descr) {
-        pcap_dispatch(*descr, -1, acktrack_callback, (u_char*)acktrack); /* TODO: replace acktrack parameter with something that contains the acktrack and headerlength based on interface */
+    while (descr) {
+        pcap_dispatch(descr->handle, -1, acktrack_callback, (u_char*)acktrack); /* TODO: replace acktrack parameter with something that contains the acktrack and headerlength based on interface */
         descr++;
     }
 }
@@ -460,7 +463,7 @@ acktrack_t *acktrack_openallinterfaces(char *filter)
     int i=0;
     int c=0;
     int has_ipv4_addr;  // will need "has_ipv6_addr" or similar to add ipv6 functionality
-    pcap_t **descr;
+    acktrack_cap_t *descr;
     struct bpf_program fp;
     acktrack_t *ret;
     char errbuf[PCAP_ERRBUF_SIZE];
@@ -499,13 +502,15 @@ acktrack_t *acktrack_openallinterfaces(char *filter)
         }
 
 
-    descr = (pcap_t**)malloc(sizeof(pcap_t *) * (c+1));
+    descr = (acktrack_cap_t*)malloc(sizeof(acktrack_cap_t) * (c+1));
     i = 0;
 
     for (d=f; d!= NULL; d = d->next) {
-        descr[i] = pcap_open_live(d->name, BUFSIZ, 0, -1,errbuf);
+        descr[i].handle = pcap_open_live(d->name, BUFSIZ, 0, -1,errbuf);
 
-        if(descr[i] == NULL) {
+        // if (d->flags & PCAP_IF_LOOPBACK) {
+
+        if(descr[i].handle == NULL) {
             logmsg("pcap_open_live failed for interface %s", d->name);
             acktrack_freeip4devs(f);
             free(descr);
@@ -514,7 +519,7 @@ acktrack_t *acktrack_openallinterfaces(char *filter)
 
     // compile the filter string we built above into a BPF binary.  The string, by the way, can be tested with
     // tshark or wireshark
-        if (pcap_compile(descr[i], &fp, filter, 0, PCAP_NETMASK_UNKNOWN) == -1) {
+        if (pcap_compile(descr[i].handle, &fp, filter, 0, PCAP_NETMASK_UNKNOWN) == -1) {
             logmsg("pcap_compile failed");
             acktrack_freeip4devs(f);
             free(descr);
@@ -522,21 +527,21 @@ acktrack_t *acktrack_openallinterfaces(char *filter)
         }
 
         // Load the compiled filter into the kernel
-        if (pcap_setfilter(descr[i], &fp) == -1) {
+        if (pcap_setfilter(descr[i].handle, &fp) == -1) {
             logmsg("pcap_setfilter failed");
             acktrack_freeip4devs(f);
             free(descr);
             return NULL;
         }
 
-        pcap_set_timeout(descr[i], 1);
+        pcap_set_timeout(descr[i].handle, 1);
         // return value?
 
         i++;
         }
 
 
-    descr[i] = NULL;
+    descr[i].handle = NULL;
 
     pcap_freealldevs(alldevs);
     acktrack_freeip4devs(f);
