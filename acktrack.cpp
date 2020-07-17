@@ -473,11 +473,14 @@ acktrack_t *acktrack_openallinterfaces(char *filter)
     for (d=alldevs; d != NULL; d = d->next) {
         has_ipv4_addr = 0;
         // if (!strcmp(d->name, "\\Device\\NPF_Loopback"))
-        if (d->flags & PCAP_IF_LOOPBACK)
+        if (d->flags & PCAP_IF_LOOPBACK) {
+            logmsg("Found loopback %s", d->name);
             has_ipv4_addr = 1;
-        else for(a=d->addresses; a; a=a->next) {
-            if (a->addr->sa_family == AF_INET)
+        } else for(a=d->addresses; a; a=a->next) {
+            if (a->addr->sa_family == AF_INET) {
+                logmsg("Found iface with IPv4 address %s\n", d->name);
                 has_ipv4_addr = 1;
+                }
         }
         if (! has_ipv4_addr) {
             continue;
