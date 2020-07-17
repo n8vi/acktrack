@@ -72,8 +72,13 @@ typedef struct sequence_event {
     u_char has_fin;
 } sequence_event_t;
 
+typedef struct acktrack_cap_t {
+    pcap_t    *handle;
+    u_int      headerlen;
+} acktrack_cap_t;
+
 /* The following struct may be subject to change */
-typedef struct acktrack_t{
+typedef struct acktrack_t {
     struct in_addr laddr;        /* local IP address  */  /* this is a problem for ipv6, obv */
     struct in_addr raddr;        /* remote IP address */  /* this is a problem for ipv6, obv */
     u_short lport;               /* local TCP port    */
@@ -97,7 +102,7 @@ typedef struct acktrack_t{
     u_char lastpktislocal;          /* nonzero if last packet seen was sent by us */
     pcap_t** curcap;            /* current pcap_t handle used by acktrack_next() */
     void *cb;
-}acktrack_t;
+} acktrack_t;
 
 typedef void (*acktrack_cb_t)(acktrack_t*, sequence_event_t *);
 

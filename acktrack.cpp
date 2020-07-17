@@ -472,7 +472,8 @@ acktrack_t *acktrack_openallinterfaces(char *filter)
 
     for (d=alldevs; d != NULL; d = d->next) {
         has_ipv4_addr = 0;
-        if (!strcmp(d->name, "\\Device\\NPF_Loopback"))
+        // if (!strcmp(d->name, "\\Device\\NPF_Loopback"))
+        if (d->flags & PCAP_IF_LOOPBACK)
             has_ipv4_addr = 1;
         else for(a=d->addresses; a; a=a->next) {
             if (a->addr->sa_family == AF_INET)
