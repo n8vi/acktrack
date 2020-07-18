@@ -231,6 +231,8 @@ void CDECL acktrack_parsepacket(acktrack_t* acktrack, const struct pcap_pkthdr* 
     // Now, clearly IPv6 is parsable, since wireshark can do it, but it requires a bit of a dance.
 
 
+    // magic = (u_char *)(packet->curcap->headerlen);
+
     magic = (u_char*)(packet + 4);
 
     if (((*magic) & 0xf0) != 0x40)
@@ -351,10 +353,11 @@ void CDECL acktrack_parsepacket(acktrack_t* acktrack, const struct pcap_pkthdr* 
 void CDECL acktrack_callback(u_char* user, const struct pcap_pkthdr* pkthdr, const u_char* packet)
 {
     sequence_event_t event_data;
-    acktrack_t* acktrack = (acktrack_t*)user;  /* TODO: this should contain an acktrack AND a headerlength */
+    acktrack_t* acktrack = (acktrack_t*)user;  /* TODO: here we have a packet to parse and know its header length in acktrack->curcap->headerlen */
+
     acktrack_cb_t cb = (acktrack_cb_t)acktrack->cb;
 
-    acktrack_parsepacket(acktrack, pkthdr, packet, &event_data); /* TODO: pass in headerlength */
+    acktrack_parsepacket(acktrack, pkthdr, packet, &event_data); /* TODO: pass in headerlength,  */
 
     if (event_data.is_interesting)
         cb(acktrack, &event_data);
@@ -414,7 +417,7 @@ sequence_event_t *acktrack_next(acktrack_t *acktrack)
             break;
         case 1: // Got a packet
             logmsg("ACKTRACK_NEXT: GOT A PACKET");
-            acktrack_parsepacket(acktrack, pkthdr, packet, &ret); /* TODO: here we have a packet to parse and potentially know its header length */
+            acktrack_parsepacket(acktrack, pkthdr, packet, &ret); /* TODO: here we have a packet to parse and know its header length in acktrack->curcap->headerlen */
             break;
         case PCAP_ERROR: // got an error
             logmsg("ACKTRACK_NEXT: GOT AN ERROR");
@@ -432,15 +435,13 @@ sequence_event_t *acktrack_next(acktrack_t *acktrack)
 
 void CDECL acktrack_dispatch(acktrack_t* acktrack, acktrack_cb_t cb)
 {
-    acktrack_cap_t* descr;
-
     acktrack->cb = (void*) cb;
 
-    descr = acktrack->caps;
+    acktrack->curcap = acktrack->caps;
 
-    while (descr) {
-        pcap_dispatch(descr->handle, -1, acktrack_callback, (u_char*)acktrack); /* TODO: replace acktrack parameter with something that contains the acktrack and headerlength based on interface */
-        descr++;
+    while (acktrack->curcap->handle) {
+        pcap_dispatch(acktrack->curcap->handle, -1, acktrack_callback, (u_char*)acktrack); /* TODO: here we have a packet to parse and know its header length in acktrack->curcap->headerlen */
+        acktrack->curcap++;
     }
 }
 
@@ -508,7 +509,13 @@ acktrack_t *acktrack_openallinterfaces(char *filter)
     for (d=f; d!= NULL; d = d->next) {
         descr[i].handle = pcap_open_live(d->name, BUFSIZ, 0, -1,errbuf);
 
-        // if (d->flags & PCAP_IF_LOOPBACK) {
+        if (d->flags & PCAP_IF_LOOPBACK) {
+            descr[i].headerlen = 4;
+            logmsg("%s is loopback, thus headerlen 4", d->name);
+        } else {
+            logmsg("%s is ethernet, thus headerlen 14", d->name);
+            descr[i].headerlen = 14;
+            }
 
         if(descr[i].handle == NULL) {
             logmsg("pcap_open_live failed for interface %s", d->name);
@@ -524,7 +531,7 @@ acktrack_t *acktrack_openallinterfaces(char *filter)
             acktrack_freeip4devs(f);
             free(descr);
             return NULL;
-        }
+            }
 
         // Load the compiled filter into the kernel
         if (pcap_setfilter(descr[i].handle, &fp) == -1) {
@@ -532,7 +539,7 @@ acktrack_t *acktrack_openallinterfaces(char *filter)
             acktrack_freeip4devs(f);
             free(descr);
             return NULL;
-        }
+            }
 
         pcap_set_timeout(descr[i].handle, 1);
         // return value?
