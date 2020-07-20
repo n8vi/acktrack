@@ -43,7 +43,9 @@ int main(int argc, char* argv[])
 
     int iResult;
 
-    // acktrack_openlog("/tmp/acktrack.log");
+    printf("opening log\n");
+    acktrack_openlog("/tmp/acktrack.log");
+    printf("opened log\n");
 
 #ifdef WIN32
     WSADATA wsaData;

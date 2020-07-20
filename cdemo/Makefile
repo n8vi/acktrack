@@ -3,7 +3,7 @@ LDLIBS = -lacktrack
 
 all: cdemo
 
-cdemo: ../libacktrack.so
+cdemo: cdemo.cpp ../libacktrack.so
 	gcc -o cdemo -I.. cdemo.cpp -L.. $(LDLIBS)
 
 ../acktrack.o: ../acktrack.cpp
