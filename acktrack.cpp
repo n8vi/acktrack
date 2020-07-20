@@ -182,21 +182,11 @@ void CDECL acktrack_parsepacket(acktrack_t* acktrack, const struct pcap_pkthdr* 
     int islpkt = 0;
     int gotlack = 0;
     int gotlseq = 0;
-    u_char *magic;
+    u_char *buf;
 
     bzero(event_data, sizeof(sequence_event_t));
 
-    // TODO: The "magic" here deals with ethernet captures (ethernet header followed by ip header, etc)
-    // vs loopback captures (no ethernet header).  This is a fairly terrible way to handle this
-    // and probably should be rethought before doing ipv6.
-    // I've marked all the things that need to change with "TODO" throughout the code.
-
-    // https://www.tcpdump.org/pcap.html (search in page for "assumes ethernet headers"
-    // https://www.tcpdump.org/linktypes.html
-
-    // =================================================================================================
-
-    // Additional magic may be required here to handle skipping past ipv6 headers into the transport
+    // Magic may be required here to handle skipping past ipv6 headers into the transport
     // layer header.  IPv6 has no IHL field.  You may read that IPv6 packets have a fixed 40-octet
     // header. That's nice, right?  Well, that's true only if the packet has no iextension headers.
     // And you can only figure out options by looking at the "next header" field.
@@ -231,17 +221,9 @@ void CDECL acktrack_parsepacket(acktrack_t* acktrack, const struct pcap_pkthdr* 
     // Now, clearly IPv6 is parsable, since wireshark can do it, but it requires a bit of a dance.
 
 
-    magic = (u_char *)(packet + acktrack->curcap->headerlen);
+    buf = (u_char *)(packet + acktrack->curcap->headerlen);
 
-    /*
-    magic = (u_char*)(packet + 4);
-
-    if (((*magic) & 0xf0) != 0x40)
-        magic = (u_char*)(packet + 14);
-    */
-
-    //ih = (ip_header*)(packet + 14);
-    ih = (ip_header*)(magic);
+    ih = (ip_header*)(buf);
     ip_len = (ih->ver_ihl & 0xf) * 4;
     th = (tcp_header*)((u_char*)ih + ip_len);
 
@@ -355,11 +337,11 @@ void CDECL acktrack_parsepacket(acktrack_t* acktrack, const struct pcap_pkthdr* 
 void CDECL acktrack_callback(u_char* user, const struct pcap_pkthdr* pkthdr, const u_char* packet)
 {
     sequence_event_t event_data;
-    acktrack_t* acktrack = (acktrack_t*)user;  /* TODO: here we have a packet to parse and know its header length in acktrack->curcap->headerlen */
+    acktrack_t* acktrack = (acktrack_t*)user; 
 
     acktrack_cb_t cb = (acktrack_cb_t)acktrack->cb;
 
-    acktrack_parsepacket(acktrack, pkthdr, packet, &event_data); /* TODO: pass in headerlength,  */
+    acktrack_parsepacket(acktrack, pkthdr, packet, &event_data);
 
     if (event_data.is_interesting)
         cb(acktrack, &event_data);
@@ -419,7 +401,7 @@ sequence_event_t *acktrack_next(acktrack_t *acktrack)
             break;
         case 1: // Got a packet
             logmsg("ACKTRACK_NEXT: GOT A PACKET");
-            acktrack_parsepacket(acktrack, pkthdr, packet, &ret); /* TODO: here we have a packet to parse and know its header length in acktrack->curcap->headerlen */
+            acktrack_parsepacket(acktrack, pkthdr, packet, &ret);
             break;
         case PCAP_ERROR: // got an error
             logmsg("ACKTRACK_NEXT: GOT AN ERROR");
@@ -442,7 +424,7 @@ void CDECL acktrack_dispatch(acktrack_t* acktrack, acktrack_cb_t cb)
     acktrack->curcap = acktrack->caps;
 
     while (acktrack->curcap->handle) {
-        pcap_dispatch(acktrack->curcap->handle, -1, acktrack_callback, (u_char*)acktrack); /* TODO: here we have a packet to parse and know its header length in acktrack->curcap->headerlen */
+        pcap_dispatch(acktrack->curcap->handle, -1, acktrack_callback, (u_char*)acktrack);
         acktrack->curcap++;
     }
 }
