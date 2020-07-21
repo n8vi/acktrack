@@ -87,6 +87,10 @@ Module Module1
 
         socket = createSocket(host, port)
 
+        Console.Write(socket.LocalEndPoint.ToString())
+        Console.Write(" ==> ")
+        Console.WriteLine(socket.RemoteEndPoint.ToString())
+
         cs = acktrack_create_fromstrings(socket.LocalEndPoint.ToString(), socket.RemoteEndPoint.ToString())
 
         If socket IsNot Nothing Then
@@ -134,9 +138,10 @@ Module Module1
                 ipe = New IPEndPoint(ipaddress, port)
             End Try
 
-            If ipe.AddressFamily <> InterNetwork Then
+            If ipe.AddressFamily <> AddressFamily.InterNetwork Then
                 Continue For
             End If
+
 
             Dim sock As Socket = New Socket(ipe.AddressFamily, SocketType.Stream, ProtocolType.Tcp)
             Console.WriteLine("Connecting to {0}:{1}", server, port)
