@@ -126,8 +126,6 @@ Module Module1
             Return Nothing
         End Try
 
-
-
         For Each ipaddress In hostEntry.AddressList
             Dim ipe As IPEndPoint
             Try
@@ -135,6 +133,10 @@ Module Module1
             Catch
                 ipe = New IPEndPoint(ipaddress, port)
             End Try
+
+            If ipe.AddressFamily <> InterNetwork Then
+                Continue For
+            End If
 
             Dim sock As Socket = New Socket(ipe.AddressFamily, SocketType.Stream, ProtocolType.Tcp)
             Console.WriteLine("Connecting to {0}:{1}", server, port)
