@@ -79,9 +79,9 @@ typedef struct acktrack_cap_t {
 
 /* The following struct may be subject to change */
 /*
-Change laddr and raddr to struct sockaddr.  This structure can hold IPv4 or IPv6 addresses
-which can identify themselves as such.  It also contains a 16-bit port number we won't be using
-but we don't care and this is what folks usually do when they want to store an IPv4/IPv6 address
+TODO: Change laddr and raddr to struct sockaddr.  This structure can hold IPv4 or IPv6 addresses
+which can identify themselves as such.  It also contains a port number which can subsume our
+"lport" and "rport" fields.
 */
 typedef struct acktrack_t {
     struct in_addr laddr;        /* local IP address  */  /* this is a problem for ipv6, obv */
