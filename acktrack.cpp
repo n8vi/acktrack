@@ -263,16 +263,19 @@ void CDECL acktrack_parsepacket(acktrack_t* acktrack, const struct pcap_pkthdr* 
 
     if (!acktrack->gotorigpkt) {
         logmsg("   --> Original packet.  Source deemed local.");
+        /* TODO: laddr and raddr will be switched to struct sockaddr */
         memcpy(&acktrack->laddr, &ih->saddr, sizeof(struct in_addr));
         memcpy(&acktrack->raddr, &ih->daddr, sizeof(struct in_addr));
         acktrack->lport = htons(th->sport);
         acktrack->rport = htons(th->dport);
+        /* ... */
         acktrack->lseqorig = absseqno - 1;
         acktrack->rseqorig = absackno - 1;
         memcpy(&acktrack->origtime, &pkthdr->ts, sizeof(struct timeval));
         acktrack->gotorigpkt = 1;
         islpkt = 1;
     }
+    /* TODO: laddr and raddr will be switched to struct sockaddr */
     else  if (!memcmp(&acktrack->laddr, &ih->saddr, sizeof(struct in_addr)) && sport == acktrack->lport) {
         islpkt = 1;
     }
@@ -600,8 +603,8 @@ acktrack_t* CDECL acktrack_create_fromstrings(char* LocalEndPointStr, char* Remo
 
 acktrack_t *acktrack_create(int sck) // no errbuf
 {
-    struct sockaddr_in laddr;
-    struct sockaddr_in raddr;
+    struct sockaddr_in laddr; /* TODO: switch to struct sockaddr */
+    struct sockaddr_in raddr; /* TODO: switch to struct sockaddr */
     socklen_t len;
     int r;
     acktrack_t *ret;
