@@ -133,7 +133,7 @@ struct sockaddr *parseendpoint(char* endpoint)
     if (!portstr) {
         sa4->sin_family = AF_INET;
         ipstr = strtok(epstr, ":");
-        if (!inet_aton(ipstr, &(sa4->sin_addr))) {
+        if (!inet_pton(AF_INET, ipstr, &(sa4->sin_addr))) {
             return 0;
             }
         portstr = strtok(NULL, ":");
