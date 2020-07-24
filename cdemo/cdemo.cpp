@@ -7,7 +7,7 @@
 void error(char* msg)
 {
     perror(msg);
-    exit(0);
+    exit(1);
 }
 
 
@@ -43,11 +43,11 @@ int main(int argc, char* argv[])
 
     int iResult;
 
-    /*
+#ifdef LOGFILE
     printf("opening log\n");
-    acktrack_openlog("/tmp/acktrack.log");
+    acktrack_openlog(LOGFILE);
     printf("opened log\n");
-    */
+#endif
 
 #ifdef WIN32
     WSADATA wsaData;
@@ -74,7 +74,7 @@ int main(int argc, char* argv[])
     server = gethostbyname(argv[1]);
     if (server == NULL) {
         fprintf(stderr, "ERROR, no such host\n");
-        exit(0);
+        exit(1);
     }
     bzero((char*)&serv_addr, sizeof(serv_addr));
     serv_addr.sin_family = AF_INET;

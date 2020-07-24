@@ -304,7 +304,7 @@ void CDECL acktrack_parsepacket(acktrack_t* acktrack, const struct pcap_pkthdr* 
 
     // Now, clearly IPv6 is parsable, since wireshark can do it, but it requires a bit of a dance.
 
-
+    logmsg("Skipping %d octet header", acktrack->curcap->headerlen);
     buf = (u_char *)(packet + acktrack->curcap->headerlen);
 
     ih = (ip_header*)(buf);
