@@ -84,6 +84,8 @@ which can identify themselves as such.  It also contains a port number which can
 "lport" and "rport" fields.
 */
 typedef struct acktrack_t {
+    struct sockaddr_storage local;
+    struct sockaddr_storage remote;
     struct in_addr laddr;        /* local IP address  */  /* this is a problem for ipv6, obv */
     struct in_addr raddr;        /* remote IP address */  /* this is a problem for ipv6, obv */
     u_short lport;               /* local TCP port    */

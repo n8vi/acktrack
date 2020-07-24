@@ -75,6 +75,90 @@ void logmsg(const char *fmt, ...)
         }
 }
 
+u_short get_port(const struct sockaddr *sa)
+{
+    static char s[6];
+        switch(sa->sa_family) {
+        case AF_INET:
+            return htons(((struct sockaddr_in *)sa)->sin_port);
+            break;
+        case AF_INET6:
+            return htons(((struct sockaddr_in6 *)sa)->sin6_port);
+            break;
+        default:
+            return 0;
+    }
+}
+
+char *get_ip_str(const struct sockaddr *sa)
+{
+    static char s[41];
+    switch(sa->sa_family) {
+        case AF_INET:
+            inet_ntop(AF_INET, &(((struct sockaddr_in *)sa)->sin_addr),
+                    s, 40);
+            break;
+
+        case AF_INET6:
+            inet_ntop(AF_INET6, &(((struct sockaddr_in6 *)sa)->sin6_addr),
+                    s, 40);
+            break;
+
+        default:
+            return NULL;
+    }
+
+    return s;
+}
+
+struct sockaddr *parseendpoint(char* endpoint)
+{
+    static struct sockaddr_storage sas;
+    struct sockaddr_in *sa4 = (struct sockaddr_in*)&sas;
+    struct sockaddr_in6 *sa6 = (struct sockaddr_in6*)&sas;
+    struct sockaddr *sa = (struct sockaddr*)&sas;
+    char epstr[48];
+    char *ipstr;
+    char *portstr;
+    int ret;
+
+    if (strlen(endpoint) > 47)
+        return 0;
+
+    strcpy(epstr, endpoint);
+
+    ipstr = strtok(epstr, "]");
+    portstr = strtok(NULL, "]");
+
+    if (!portstr) {
+        sa4->sin_family = AF_INET;
+        ipstr = strtok(epstr, ":");
+        if (!inet_aton(ipstr, &(sa4->sin_addr))) {
+            return 0;
+            }
+        portstr = strtok(NULL, ":");
+        sa4->sin_port = htons(atoi(portstr));
+    } else {
+        sa6->sin6_family = AF_INET6;
+        if (*ipstr == '[')
+            (ipstr)++;
+        else {
+            return 0;
+            }
+        if (*portstr == ':')
+            (portstr)++;
+        else {
+            return 0;
+            }
+        if (!inet_pton(AF_INET6, ipstr, &(sa6->sin6_addr))){
+            return 0;
+            }
+        sa6->sin6_port = htons(atoi(portstr));
+        }
+    return sa;
+}
+
+
 void CDECL acktrack_free(acktrack_t* acktrack)
 {
     if (acktrack) {
