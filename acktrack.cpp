@@ -581,7 +581,12 @@ acktrack_t *acktrack_openallinterfaces(char *filter)
         descr[i].handle = pcap_open_live(d->name, BUFSIZ, 0, -1,errbuf);
 
         if (d->flags & PCAP_IF_LOOPBACK) {
+#ifdef WIN32
+            /* I think this is a windows-specific thing ... ? */
             descr[i].headerlen = 4;
+#else
+            descr[i].headerlen = 14;
+#endif
             logmsg("%s is loopback, thus headerlen 4", d->name);
         } else {
             logmsg("%s is ethernet, thus headerlen 14", d->name);
