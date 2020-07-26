@@ -267,6 +267,7 @@ void CDECL acktrack_parsepacket(acktrack_t* acktrack, const struct pcap_pkthdr* 
     int gotlack = 0;
     int gotlseq = 0;
     u_char *buf;
+    int skiplen = 14; // ethernet by default
 
     bzero(event_data, sizeof(sequence_event_t));
 
@@ -304,8 +305,16 @@ void CDECL acktrack_parsepacket(acktrack_t* acktrack, const struct pcap_pkthdr* 
 
     // Now, clearly IPv6 is parsable, since wireshark can do it, but it requires a bit of a dance.
 
-    logmsg("Skipping %d octet header", acktrack->curcap->headerlen);
-    buf = (u_char *)(packet + acktrack->curcap->headerlen);
+#ifdef WIN32
+
+    if (pcap_datalink(acktrack->curcap->handle) == DLT_NULL)
+        skiplen = 4;
+#endif
+
+    logmsg("Skipping %d octet header", skiplen);
+    // printf("Skipping %d octet header", skiplen);
+
+    buf = (u_char*)(packet + skiplen);
 
     ih = (ip_header*)(buf);
     ip_len = (ih->ver_ihl & 0xf) * 4;
@@ -583,7 +592,7 @@ acktrack_t *acktrack_openallinterfaces(char *filter)
         if (d->flags & PCAP_IF_LOOPBACK) {
 #ifdef WIN32
             /* I think this is a windows-specific thing ... ? */
-            descr[i].headerlen = 4;
+            descr[i].headerlen = 4; // ???
 #else
             descr[i].headerlen = 14;
 #endif

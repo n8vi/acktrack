@@ -4,6 +4,8 @@
 #define _WINSOCK_DEPRECATED_NO_WARNINGS 1
 #define _CRT_SECURE_NO_WARNINGS 1
 
+#define LOGFILE "mylog.txt"
+
 void error(char* msg)
 {
     perror(msg);
@@ -13,32 +15,25 @@ void error(char* msg)
 
 void printpkt(sequence_event_t* se)
 {
-    static int pktidx = 0;
-    int seqnos[4] = {8,8,9,9};
+    static int seqno = 8;
+    static int ackno = 8;
 
     if (acktrack_se_is_interesting(se)) {
-        if (pktidx > 3){
-            printf("PACKET OUT OF SEQUENCE\n");
-            exit(1);
-            }
         if (acktrack_se_is_local(se)) {
             printf("  --> SEQ %lu.%lu: %d\n", acktrack_se_ts_sec(se), acktrack_se_ts_usec(se), acktrack_se_seqno(se));
-            if (pktidx % 2 != 0){
+            if (seqno > acktrack_se_seqno(se) || acktrack_se_seqno(se) > 9){
                 printf("PACKET OUT OF SEQUENCE\n");
                 exit(1);
                 }
+            seqno = acktrack_se_seqno(se);
         } else {
             printf("  <-- ACK %lu.%lu: %d\n", acktrack_se_ts_sec(se), acktrack_se_ts_usec(se), acktrack_se_seqno(se));
-            if (pktidx % 2 != 1){
+            if (ackno > acktrack_se_seqno(se) || acktrack_se_seqno(se) > 9) {
                 printf("PACKET OUT OF SEQUENCE\n");
                 exit(1);
                 }
-            }
-        if (acktrack_se_seqno(se) != seqnos[pktidx]){
-            printf("PACKET OUT OF SEQUENCE\n");
-            exit(1);
-            }
-    pktidx++;
+            ackno = acktrack_se_seqno(se);
+        }
     }
 }
 

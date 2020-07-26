@@ -1,20 +1,20 @@
 {
   "format": 1,
   "restore": {
-    "C:\\Users\\tdb\\Desktop\\acktrack\\vbdemo\\vbdemo.vbproj": {}
+    "C:\\Users\\bradn\\Source\\Repos\\acktrack\\vbdemo\\vbdemo.vbproj": {}
   },
   "projects": {
-    "C:\\Users\\tdb\\Desktop\\acktrack\\vbdemo\\vbdemo.vbproj": {
+    "C:\\Users\\bradn\\Source\\Repos\\acktrack\\vbdemo\\vbdemo.vbproj": {
       "version": "1.0.0",
       "restore": {
-        "projectUniqueName": "C:\\Users\\tdb\\Desktop\\acktrack\\vbdemo\\vbdemo.vbproj",
+        "projectUniqueName": "C:\\Users\\bradn\\Source\\Repos\\acktrack\\vbdemo\\vbdemo.vbproj",
         "projectName": "vbdemo",
-        "projectPath": "C:\\Users\\tdb\\Desktop\\acktrack\\vbdemo\\vbdemo.vbproj",
-        "packagesPath": "C:\\Users\\tdb\\.nuget\\packages\\",
-        "outputPath": "C:\\Users\\tdb\\Desktop\\acktrack\\vbdemo\\obj\\",
+        "projectPath": "C:\\Users\\bradn\\Source\\Repos\\acktrack\\vbdemo\\vbdemo.vbproj",
+        "packagesPath": "C:\\Users\\bradn\\.nuget\\packages\\",
+        "outputPath": "C:\\Users\\bradn\\Source\\Repos\\acktrack\\vbdemo\\obj\\",
         "projectStyle": "PackageReference",
         "configFilePaths": [
-          "C:\\Users\\tdb\\AppData\\Roaming\\NuGet\\NuGet.Config",
+          "C:\\Users\\bradn\\AppData\\Roaming\\NuGet\\NuGet.Config",
           "C:\\Program Files (x86)\\NuGet\\Config\\Microsoft.VisualStudio.Offline.config"
         ],
         "originalTargetFrameworks": [
@@ -52,7 +52,7 @@
               "privateAssets": "all"
             }
           },
-          "runtimeIdentifierGraphPath": "C:\\Program Files\\dotnet\\sdk\\3.1.101\\RuntimeIdentifierGraph.json"
+          "runtimeIdentifierGraphPath": "C:\\Program Files\\dotnet\\sdk\\3.1.301\\RuntimeIdentifierGraph.json"
         }
       }
     }
