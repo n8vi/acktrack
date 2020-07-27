@@ -4,8 +4,6 @@
 #define _WINSOCK_DEPRECATED_NO_WARNINGS 1
 #define _CRT_SECURE_NO_WARNINGS 1
 
-#define LOGFILE "mylog.txt"
-
 void error(char* msg)
 {
     perror(msg);
