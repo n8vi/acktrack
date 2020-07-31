@@ -1,4 +1,4 @@
-A cross-platform library for keeping track of TCP ACKs in response to data sent on a socket.  Requires libpcap/winpcap/npcap.
+A cross-platform library for keeping track of TCP ACKs in response to data sent on a socket.  Requires npcap (https://npcap.org) / winpcap (untested) or libpcap.
 
 Under linux, "make" builds the libacktrack.so shared library and the cdemo test binary, and "make test" runs the demo code
 under gdb.
