@@ -305,6 +305,10 @@ void CDECL acktrack_parsepacket(acktrack_t* acktrack, const struct pcap_pkthdr* 
 
     // Now, clearly IPv6 is parsable, since wireshark can do it, but it requires a bit of a dance.
 
+    // IT SHOULD BE NOTED THAT RFC8200 OBSOLETES RFC2460 AND SUPERCEDES RFC7045 BY 3.5 YEARS
+    // RFC8200 ALSO GAINED STD STATUS IN 2018 AS STD86
+    // PERHAPS IT IS WORTH A COMPLETE READ
+
 #ifdef WIN32
 
     if (pcap_datalink(acktrack->curcap->handle) == DLT_NULL)
@@ -355,12 +359,15 @@ void CDECL acktrack_parsepacket(acktrack_t* acktrack, const struct pcap_pkthdr* 
     logmsg("acktrack_parsepacket(): %s:%d -> %s:%d", inet_ntoa(ih->saddr), ntohs(th->sport), inet_ntoa(ih->daddr), ntohs(th->dport));
 
     if (!acktrack->gotorigpkt) {
-        logmsg("   --> Original packet.  Source deemed local.");
+        /* TODO: perhaps assert following "should" */
+        logmsg("   --> Original packet.  Source should be local.");
         /* TODO: laddr and raddr will be switched to struct sockaddr */
+        /*
         memcpy(&acktrack->laddr, &ih->saddr, sizeof(struct in_addr));
         memcpy(&acktrack->raddr, &ih->daddr, sizeof(struct in_addr));
         acktrack->lport = htons(th->sport);
         acktrack->rport = htons(th->dport);
+        */ 
         /* ... */
         acktrack->lseqorig = absseqno - 1;
         acktrack->rseqorig = absackno - 1;
@@ -540,6 +547,11 @@ char* CDECL acktrack_error(void)
 }
 
 int acktrack_opencap(acktrack_t *acktrack)
+// Why not check the routing table and pick the interface based on that you ask?  INBOUND packets are not
+// bound to the rules of OUR routing table, they can come from literally anywhere.  Also, that sounds like
+// a lot more work.
+
+// Why not open "any" interface?  Because code may run on Windows, which doesn't have one.
 {
     char lipstr[46];
     char ripstr[46];
