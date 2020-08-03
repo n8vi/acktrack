@@ -525,6 +525,7 @@ void CDECL acktrack_dispatch(acktrack_t* acktrack, acktrack_cb_t cb)
     }
 }
 
+
 acktrack_t *acktrack_openallinterfaces(char *filter)
 // Why not check the routing table and pick the interface based on that you ask?  INBOUND packets are not
 // bound to the rules of OUR routing table, they can come from literally anywhere.  Also, that sounds like
@@ -661,6 +662,151 @@ char* CDECL acktrack_error(void)
 
 }
 
+int acktrack_opencap(acktrack_t *acktrack)
+{
+    char lipstr[46];
+    char ripstr[46];
+    u_short lport;
+    u_short rport;
+    const char filter[321] = "";
+    pcap_if_t *alldevs;
+    char errbuf[PCAP_ERRBUF_SIZE];
+    pcap_if_t *d;
+    pcap_addr_t *a;
+    pcap_if_t *p = NULL;
+    pcap_if_t *m = NULL;
+    pcap_if_t *f = NULL;
+    int c=0;
+    acktrack_cap_t *descr;
+    int has_ipv4_addr;  // will need "has_ipv6_addr" or similar to add ipv6 functionality
+    int i=0;
+    struct bpf_program fp;
+
+    strcpy(lipstr, get_ip_str((const struct sockaddr *)&(acktrack->local)));
+    strcpy(ripstr, get_ip_str((const struct sockaddr *)&(acktrack->remote)));
+    lport = get_port((const struct sockaddr *)&(acktrack->local));
+    rport = get_port((const struct sockaddr *)&(acktrack->remote));
+
+    sprintf((char*)filter, "tcp and ((src host %s and src port %d and dst host %s and dst port %d) or (src host %s and src port %d and dst host %s and dst port %d))",
+        lipstr, lport, ripstr, rport,
+        ripstr, rport, lipstr, lport);
+        
+    logmsg("filter: %s", filter);
+
+    if (acktrack->remote.ss_family != AF_INET) { // We will need to update this to add ipv6
+    // if (raddr.sin_family != AF_INET) { // We will need to update this to add ipv6
+        logmsg("Socket is not ipv4");
+        return 5;
+    }
+
+    if (pcap_findalldevs(&alldevs, errbuf) == -1)
+        return 1;
+
+    for (d=alldevs; d != NULL; d = d->next) {
+        has_ipv4_addr = 0;
+        // if (!strcmp(d->name, "\\Device\\NPF_Loopback"))
+        if (d->flags & PCAP_IF_LOOPBACK) {
+            logmsg("Found loopback %s", d->name);
+            has_ipv4_addr = 1;
+        } else for(a=d->addresses; a; a=a->next) {
+            if (a->addr->sa_family == AF_INET) {
+                logmsg("Found iface with IPv4 address %s\n", d->name);
+                has_ipv4_addr = 1;
+                }
+        }
+        if (! has_ipv4_addr) {
+            continue;
+            }
+
+        p = m;
+        m = (pcap_if_t *)malloc(sizeof(pcap_if_t));
+        memcpy(m,d,sizeof(pcap_if_t));
+        m->next = NULL;
+        if (p)
+            p->next = m;
+        if (!f)
+            f = m;
+        c++;
+
+        }
+
+    descr = (acktrack_cap_t*)malloc(sizeof(acktrack_cap_t) * (c+1));
+    i = 0;
+
+    for (d=f; d!= NULL; d = d->next) {
+        descr[i].handle = pcap_open_live(d->name, BUFSIZ, 0, -1,errbuf);
+
+        if (d->flags & PCAP_IF_LOOPBACK) {
+#ifdef WIN32
+            /* I think this is a windows-specific thing ... ? */
+            descr[i].headerlen = 4; // ???
+#else
+            descr[i].headerlen = 14;
+#endif
+            logmsg("%s is loopback, thus headerlen 4", d->name);
+        } else {
+            logmsg("%s is ethernet, thus headerlen 14", d->name);
+            descr[i].headerlen = 14;
+            }
+
+        if(descr[i].handle == NULL) {
+            logmsg("pcap_open_live failed for interface %s", d->name);
+            acktrack_freeip4devs(f);
+            free(descr);
+            return 2;
+            }
+
+    // compile the filter string we built above into a BPF binary.  The string, by the way, can be tested with
+    // tshark or wireshark
+        if (pcap_compile(descr[i].handle, &fp, filter, 0, PCAP_NETMASK_UNKNOWN) == -1) {
+            logmsg("pcap_compile failed");
+            acktrack_freeip4devs(f);
+            free(descr);
+            return 3;
+            }
+
+        // Load the compiled filter into the kernel
+        if (pcap_setfilter(descr[i].handle, &fp) == -1) {
+            logmsg("pcap_setfilter failed");
+            acktrack_freeip4devs(f);
+            free(descr);
+            return 4;
+            }
+
+        pcap_set_timeout(descr[i].handle, 1);
+        // return value?
+
+        i++;
+        }
+
+
+    descr[i].handle = NULL;
+
+    pcap_freealldevs(alldevs);
+    acktrack_freeip4devs(f);
+
+    acktrack->caps = descr;
+
+    return 0;
+}
+
+
+acktrack_t* CDECL acktrack_create_fromstrings(char* LocalEndPointStr, char* RemoteEndPointStr)
+{
+    static acktrack_t *ret;
+
+    ret = (acktrack_t*)malloc(sizeof(acktrack_t));
+    bzero(ret, sizeof(acktrack_t));
+
+    memcpy((void*)&(ret->local), (void*)parseendpoint(LocalEndPointStr), sizeof(ret->local));
+    memcpy((void*)&(ret->remote), (void*)parseendpoint(RemoteEndPointStr), sizeof(ret->remote));
+
+    acktrack_opencap(ret);
+
+    return ret;
+}
+
+/*
 acktrack_t* CDECL acktrack_create_fromstrings(char* LocalEndPointStr, char* RemoteEndPointStr)
 {
     char lepstr[22];
@@ -698,11 +844,87 @@ acktrack_t* CDECL acktrack_create_fromstrings(char* LocalEndPointStr, char* Remo
 
     return ret;
 }
+*/
 
+
+
+acktrack_t* CDECL acktrack_create(int sck)
+{
+    static acktrack_t *ret;
+    int r;
+    int type;
+    socklen_t typelen = sizeof(type);
+    socklen_t len;
+
+    ret = (acktrack_t*)malloc(sizeof(acktrack_t));
+    bzero(ret, sizeof(acktrack_t));
+
+    r = getsockopt(sck, SOL_SOCKET, SO_TYPE, (char*)&type, &typelen);
+
+    if (r == -1) {
+
+
+        if (errno == ENOTCONN)
+            // Gotta connect before trying this, or we don't have two endpoints to bind to
+            logmsg("Socket isn't connected");
+        else if (errno == EBADF)
+            // this integer not returned from socket(), or close() has been called on it
+            logmsg("Bad socket descriptor");
+        else
+            logmsg("Determining socket type: %s", acktrack_error());
+
+        return NULL;
+    }
+
+
+    if (type != SOCK_STREAM) {
+        logmsg("Socket is not TCP");
+        return NULL;
+    }
+
+    len = sizeof(ret->remote);
+
+    r = getpeername(sck, (struct sockaddr*)&(ret->remote), &len);
+
+    if (r == -1) {
+        if (errno == ENOTCONN)
+            // Gotta connect before trying this, or we don't have two endpoints to bind to
+            logmsg("Socket isn't connected");
+        else if (errno == EBADF)
+            // this integer not returned from socket(), or close() has been called on it
+            logmsg("Bad socket descriptor");
+        else
+            logmsg("Getting remote endpoint: %s", acktrack_error());
+
+        return NULL;
+        }
+
+
+    r = getsockname(sck, (struct sockaddr*)&(ret->local), &len);
+
+    if (r == -1) {
+        if (errno == ENOTCONN)
+            // Gotta connect before trying this, or we don't have two endpoints to bind to
+            logmsg("Socket isn't connected");
+        else if (errno == EBADF)
+            // this integer not returned from socket(), or close() has been called on it
+            logmsg("Bad socket descriptor");
+        else
+            logmsg("Getting local endpoint: %s", acktrack_error());
+
+        return NULL;
+        }
+
+    acktrack_opencap(ret);
+
+    return ret;
+}
+
+/*
 acktrack_t *acktrack_create(int sck) // no errbuf
 {
-    struct sockaddr_in laddr; /* TODO: switch to struct sockaddr */
-    struct sockaddr_in raddr; /* TODO: switch to struct sockaddr */
+    struct sockaddr_in laddr; // TODO: switch to struct sockaddr 
+    struct sockaddr_in raddr; // TODO: switch to struct sockaddr 
     socklen_t len;
     int r;
     acktrack_t *ret;
@@ -714,31 +936,26 @@ acktrack_t *acktrack_create(int sck) // no errbuf
     socklen_t typelen = sizeof(type);
     const char filter[201] = ""; // Will need to enlarge filter size to accomodate ipv6
 
-/**************************************************************************************[ maximum possible filter size ]****************************************************************************************\
-                                                                                                       1         1         1         1         1         1         1         1         1         1         2
-             1         2         3         4         5         6         7         8         9         0         1         2         3         4         5         6         7         8         9         0
-    123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901
-    tcp and ((src host xxx.xxx.xxx.xxx and src port xxxxx and dst host xxx.xxx.xxx.xxx and dst port xxxxx) or (dst host xxx.xxx.xxx.xxx and dst port xxxxx and src host xxx.xxx.xxx.xxx and src port xxxxx))$
-                                                                                                                                                                                                      _____/
-                                                                                                                                                                                     (null terminator)
-\**************************************************************************************************************************************************************************************************************/
+// *************************************************************************************[ maximum possible filter size ]***************************************************************************************
+//                                                                                                       1         1         1         1         1         1         1         1         1         1         2
+//             1         2         3         4         5         6         7         8         9         0         1         2         3         4         5         6         7         8         9         0
+//    123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901
+//    tcp and ((src host xxx.xxx.xxx.xxx and src port xxxxx and dst host xxx.xxx.xxx.xxx and dst port xxxxx) or (dst host xxx.xxx.xxx.xxx and dst port xxxxx and src host xxx.xxx.xxx.xxx and src port xxxxx))$
+//                                                                                                                                                                                                      _____/
+//                                                                                                                                                                                     (null terminator)
+// ************************************************************************************************************************************************************************************************************
 
-    /*
-    if (!fp) {
-        printf("%s\n", strerror(errno));
-        exit(0);
-    }
-    */
+//    if (!fp) {
+//        printf("%s\n", strerror(errno));
+//        exit(0);
+//    }
 
 
     logmsg("Log file opened");
 
-/*
-acktrack.cpp: In function ‘acktrack_t* acktrack_create(int)’:
-acktrack.cpp:569:68: error: invalid conversion from ‘int*’ to ‘socklen_t* {aka unsigned int*}’ [-fpermissive]
-     r = getsockopt(sck, SOL_SOCKET, SO_TYPE, (char*)&type, &typelen);
-                                                                    ^
-*/
+//acktrack.cpp: In function ‘acktrack_t* acktrack_create(int)’:
+//acktrack.cpp:569:68: error: invalid conversion from ‘int*’ to ‘socklen_t* {aka unsigned int*}’ [-fpermissive]
+//     r = getsockopt(sck, SOL_SOCKET, SO_TYPE, (char*)&type, &typelen);
 
     r = getsockopt(sck, SOL_SOCKET, SO_TYPE, (char*)&type, &typelen);
 
@@ -835,6 +1052,7 @@ acktrack.cpp:569:68: error: invalid conversion from ‘int*’ to ‘socklen_t* 
 
     return ret;
 }
+*/
 
 
 /*
