@@ -362,12 +362,12 @@ void CDECL acktrack_parsepacket(acktrack_t* acktrack, const struct pcap_pkthdr* 
         /* TODO: perhaps assert following "should" */
         logmsg("   --> Original packet.  Source should be local.");
         /* TODO: laddr and raddr will be switched to struct sockaddr */
-        /*
+        
         memcpy(&acktrack->laddr, &ih->saddr, sizeof(struct in_addr));
-        memcpy(&acktrack->raddr, &ih->daddr, sizeof(struct in_addr));
+        // memcpy(&acktrack->raddr, &ih->daddr, sizeof(struct in_addr));
         acktrack->lport = htons(th->sport);
-        acktrack->rport = htons(th->dport);
-        */ 
+        // acktrack->rport = htons(th->dport);
+         
         /* ... */
         acktrack->lseqorig = absseqno - 1;
         acktrack->rseqorig = absackno - 1;
