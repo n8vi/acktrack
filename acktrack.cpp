@@ -80,10 +80,10 @@ u_short get_port(const struct sockaddr *sa)
     static char s[6];
         switch(sa->sa_family) {
         case AF_INET:
-            return htons(((struct sockaddr_in *)sa)->sin_port);
+            return ((struct sockaddr_in *)sa)->sin_port;
             break;
         case AF_INET6:
-            return htons(((struct sockaddr_in6 *)sa)->sin6_port);
+            return ((struct sockaddr_in6 *)sa)->sin6_port;
             break;
         default:
             return 0;
@@ -369,7 +369,8 @@ void CDECL acktrack_parsepacket(acktrack_t* acktrack, const struct pcap_pkthdr* 
         // acktrack->rport = htons(th->dport);
 
         // xxx memcpy(&acktrack->laddr, &ih->saddr, sizeof(struct in_addr));
-        acktrack->lport = htons(th->sport);
+        // acktrack->lport = htons(th->sport);
+        acktrack->lport = th->sport;
          
         /* ... */
         acktrack->lseqorig = absseqno - 1;
@@ -379,7 +380,7 @@ void CDECL acktrack_parsepacket(acktrack_t* acktrack, const struct pcap_pkthdr* 
         islpkt = 1;
     }
     /* TODO: laddr and raddr will be switched to struct sockaddr */
-    else if (!memcmp((void *)&(((struct sockaddr_in*)(&acktrack->local))->sin_addr), (void*)&(ih->saddr), sizeof(struct in_addr)) && sport == acktrack->lport) {
+    else if (!memcmp((void *)&(((struct sockaddr_in*)(&acktrack->local))->sin_addr), (void*)&(ih->saddr), sizeof(struct in_addr)) && th->sport == acktrack->lport) {
     //else if (!memcmp((void *)&(((struct sockaddr_in*)(&acktrack->local))->sin_addr), (void*)&(ih->saddr), sizeof(struct in_addr)) && sport == ((struct sockaddr_in *)&(acktrack->local))->sin_port) {
     // else  if (!memcmp(&acktrack->laddr, &ih->saddr, sizeof(struct in_addr)) && sport == acktrack->lport) {
         islpkt = 1;
@@ -582,8 +583,8 @@ int acktrack_opencap(acktrack_t *acktrack)
     rport = get_port((const struct sockaddr *)&(acktrack->remote));
 
     sprintf((char*)filter, "tcp and ((src host %s and src port %d and dst host %s and dst port %d) or (src host %s and src port %d and dst host %s and dst port %d))",
-        lipstr, lport, ripstr, rport,
-        ripstr, rport, lipstr, lport);
+        lipstr, ntohs(lport), ripstr, ntohs(rport),
+        ripstr, ntohs(rport), lipstr, ntohs(lport));
         
     logmsg("filter: %s", filter);
 
