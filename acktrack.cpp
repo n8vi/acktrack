@@ -370,7 +370,7 @@ void CDECL acktrack_parsepacket(acktrack_t* acktrack, const struct pcap_pkthdr* 
 
         // xxx memcpy(&acktrack->laddr, &ih->saddr, sizeof(struct in_addr));
         // acktrack->lport = htons(th->sport);
-        acktrack->lport = th->sport;
+        // xxxxx acktrack->lport = th->sport;
          
         /* ... */
         acktrack->lseqorig = absseqno - 1;
@@ -380,8 +380,8 @@ void CDECL acktrack_parsepacket(acktrack_t* acktrack, const struct pcap_pkthdr* 
         islpkt = 1;
     }
     /* TODO: laddr and raddr will be switched to struct sockaddr */
-    else if (!memcmp((void *)&(((struct sockaddr_in*)(&acktrack->local))->sin_addr), (void*)&(ih->saddr), sizeof(struct in_addr)) && th->sport == acktrack->lport) {
-    //else if (!memcmp((void *)&(((struct sockaddr_in*)(&acktrack->local))->sin_addr), (void*)&(ih->saddr), sizeof(struct in_addr)) && sport == ((struct sockaddr_in *)&(acktrack->local))->sin_port) {
+    // else if (!memcmp((void *)&(((struct sockaddr_in*)(&acktrack->local))->sin_addr), (void*)&(ih->saddr), sizeof(struct in_addr)) && th->sport == acktrack->lport) {
+    else if (!memcmp((void *)&(((struct sockaddr_in*)(&acktrack->local))->sin_addr), (void*)&(ih->saddr), sizeof(struct in_addr)) && th->sport == ((struct sockaddr_in *)&(acktrack->local))->sin_port) {
     // else  if (!memcmp(&acktrack->laddr, &ih->saddr, sizeof(struct in_addr)) && sport == acktrack->lport) {
         islpkt = 1;
     }
