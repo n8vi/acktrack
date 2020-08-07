@@ -87,9 +87,10 @@ typedef struct acktrack_t {
     struct sockaddr_storage local;
     struct sockaddr_storage remote;
 
-    struct in_addr laddr;        // local IP address   this is a problem for ipv6, obv 
-    // struct in_addr raddr;        // remote IP address  this is a problem for ipv6, obv 
+    // struct in_addr laddr;        // local IP address   this is a problem for ipv6, obv 
     u_short lport;               // local TCP port    
+
+    // struct in_addr raddr;        // remote IP address  this is a problem for ipv6, obv 
     // u_short rport;               // remote TCP port   
 
     u_int lseqorig;              /* Local initial sequence number SEE ABOVE */

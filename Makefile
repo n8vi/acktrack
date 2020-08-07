@@ -35,7 +35,8 @@ test: all
         #
 	# make a connnection to google as a demo. 
         #
-	$(SUDO) gdb -ex='set env LD_LIBRARY_PATH $(CURDIR)' -ex=r --args cdemo/cdemo google.com 80
+	# $(SUDO) gdb -ex='set env LD_LIBRARY_PATH $(CURDIR)' -ex=r --args cdemo/cdemo google.com 80
+	sudo make citest
 
 deb: libacktrack.so
 	mkdir -p $(PROJECT)/DEBIAN
