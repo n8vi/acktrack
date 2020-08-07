@@ -269,6 +269,8 @@ void CDECL acktrack_parsepacket(acktrack_t* acktrack, const struct pcap_pkthdr* 
     u_char *buf;
     int skiplen = 14; // ethernet by default
 
+    struct sockaddr_in *sin;
+
     bzero(event_data, sizeof(sequence_event_t));
 
     // Magic may be required here to handle skipping past ipv6 headers into the transport
@@ -363,10 +365,11 @@ void CDECL acktrack_parsepacket(acktrack_t* acktrack, const struct pcap_pkthdr* 
         logmsg("   --> Original packet.  Source should be local.");
         /* TODO: laddr and raddr will be switched to struct sockaddr */
         
-        memcpy(&acktrack->laddr, &ih->saddr, sizeof(struct in_addr));
         // memcpy(&acktrack->raddr, &ih->daddr, sizeof(struct in_addr));
-        acktrack->lport = htons(th->sport);
         // acktrack->rport = htons(th->dport);
+
+        memcpy(&acktrack->laddr, &ih->saddr, sizeof(struct in_addr));
+        acktrack->lport = htons(th->sport);
          
         /* ... */
         acktrack->lseqorig = absseqno - 1;
@@ -376,7 +379,8 @@ void CDECL acktrack_parsepacket(acktrack_t* acktrack, const struct pcap_pkthdr* 
         islpkt = 1;
     }
     /* TODO: laddr and raddr will be switched to struct sockaddr */
-    else  if (!memcmp(&acktrack->laddr, &ih->saddr, sizeof(struct in_addr)) && sport == acktrack->lport) {
+    else if (!memcmp((void *)&(((struct sockaddr_in*)(&acktrack->local))->sin_addr), (void*)&(ih->saddr), sizeof(struct in_addr)) && sport == acktrack->lport) {
+    // else  if (!memcmp(&acktrack->laddr, &ih->saddr, sizeof(struct in_addr)) && sport == acktrack->lport) {
         islpkt = 1;
     }
     
