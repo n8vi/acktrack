@@ -20,9 +20,6 @@
 #include <time.h>
 #include <stdarg.h>
 
-// #define logmsg(fmt, ...) if (lfp) {fprintf(lfp, fmt, ##__VA_ARGS__); fflush(lfp);}
-// #define logmsg(...) if (fp) fprintf(fp, __VA_ARGS__)
-
 static FILE* lfp = 0;
 
 // need to add struct ip6_header for ipv6
@@ -318,7 +315,6 @@ void CDECL acktrack_parsepacket(acktrack_t* acktrack, const struct pcap_pkthdr* 
 #endif
 
     logmsg("Skipping %d octet header", skiplen);
-    // printf("Skipping %d octet header", skiplen);
 
     buf = (u_char*)(packet + skiplen);
 
@@ -586,7 +582,6 @@ int acktrack_opencap(acktrack_t *acktrack)
 
     for (d=alldevs; d != NULL; d = d->next) {
         has_ipv4_addr = 0;
-        // if (!strcmp(d->name, "\\Device\\NPF_Loopback"))
         if (d->flags & PCAP_IF_LOOPBACK) {
             logmsg("Found loopback %s", d->name);
             has_ipv4_addr = 1;
@@ -617,23 +612,6 @@ int acktrack_opencap(acktrack_t *acktrack)
 
     for (d=f; d!= NULL; d = d->next) {
         descr[i].handle = pcap_open_live(d->name, BUFSIZ, 0, -1,errbuf);
-
-// handled in acktrack_parsepacket()
-/*
-        if (d->flags & PCAP_IF_LOOPBACK) {
-
-#ifdef WIN32
-            // I think this is a windows-specific thing ... ?
-            descr[i].headerlen = 4; // ???
-#else
-            descr[i].headerlen = 14;
-#endif
-            logmsg("%s is loopback, thus headerlen 4", d->name);
-        } else {
-            logmsg("%s is ethernet, thus headerlen 14", d->name);
-            descr[i].headerlen = 14;
-            }
-*/
 
         if(descr[i].handle == NULL) {
             logmsg("pcap_open_live failed for interface %s", d->name);
