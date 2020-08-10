@@ -557,7 +557,7 @@ int acktrack_opencap(acktrack_t *acktrack)
     pcap_if_t *f = NULL;
     int c=0;
     acktrack_cap_t *descr;
-    int has_ipv4_addr;  // will need "has_ipv6_addr" or similar to add ipv6 functionality
+    int has_addr;
     int i=0;
     struct bpf_program fp;
 
@@ -581,17 +581,21 @@ int acktrack_opencap(acktrack_t *acktrack)
         return 1;
 
     for (d=alldevs; d != NULL; d = d->next) {
-        has_ipv4_addr = 0;
+        has_addr = 0;
         if (d->flags & PCAP_IF_LOOPBACK) {
             logmsg("Found loopback %s", d->name);
-            has_ipv4_addr = 1;
+            has_addr = 1;
         } else for(a=d->addresses; a; a=a->next) {
-            if (a->addr->sa_family == AF_INET) {
+            if (acktrack->remote.ss_family == AF_INET && a->addr->sa_family == AF_INET) {
                 logmsg("Found iface with IPv4 address %s\n", d->name);
-                has_ipv4_addr = 1;
+                has_addr = 1;
+                }
+            if (acktrack->remote.ss_family == AF_INET6 && a->addr->sa_family == AF_INET6) {
+                logmsg("Found iface with IPv6 address %s\n", d->name);
+                has_addr = 1;
                 }
         }
-        if (! has_ipv4_addr) {
+        if (! has_addr) {
             continue;
             }
 
