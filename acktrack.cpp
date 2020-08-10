@@ -363,26 +363,14 @@ void CDECL acktrack_parsepacket(acktrack_t* acktrack, const struct pcap_pkthdr* 
     if (!acktrack->gotorigpkt) {
         /* TODO: perhaps assert following "should" */
         logmsg("   --> Original packet.  Source should be local.");
-        /* TODO: laddr and raddr will be switched to struct sockaddr */
         
-        // memcpy(&acktrack->raddr, &ih->daddr, sizeof(struct in_addr));
-        // acktrack->rport = htons(th->dport);
-
-        // xxx memcpy(&acktrack->laddr, &ih->saddr, sizeof(struct in_addr));
-        // acktrack->lport = htons(th->sport);
-        // xxxxx acktrack->lport = th->sport;
-         
-        /* ... */
         acktrack->lseqorig = absseqno - 1;
         acktrack->rseqorig = absackno - 1;
         memcpy(&acktrack->origtime, &pkthdr->ts, sizeof(struct timeval));
         acktrack->gotorigpkt = 1;
         islpkt = 1;
     }
-    /* TODO: laddr and raddr will be switched to struct sockaddr */
-    // else if (!memcmp((void *)&(((struct sockaddr_in*)(&acktrack->local))->sin_addr), (void*)&(ih->saddr), sizeof(struct in_addr)) && th->sport == acktrack->lport) {
     else if (!memcmp((void *)&(((struct sockaddr_in*)(&acktrack->local))->sin_addr), (void*)&(ih->saddr), sizeof(struct in_addr)) && th->sport == ((struct sockaddr_in *)&(acktrack->local))->sin_port) {
-    // else  if (!memcmp(&acktrack->laddr, &ih->saddr, sizeof(struct in_addr)) && sport == acktrack->lport) {
         islpkt = 1;
     }
     
@@ -589,7 +577,6 @@ int acktrack_opencap(acktrack_t *acktrack)
     logmsg("filter: %s", filter);
 
     if (acktrack->remote.ss_family != AF_INET) { // We will need to update this to add ipv6
-    // if (raddr.sin_family != AF_INET) { // We will need to update this to add ipv6
         logmsg("Socket is not ipv4");
         return 5;
     }
@@ -631,22 +618,22 @@ int acktrack_opencap(acktrack_t *acktrack)
     for (d=f; d!= NULL; d = d->next) {
         descr[i].handle = pcap_open_live(d->name, BUFSIZ, 0, -1,errbuf);
 
-        if (d->flags & PCAP_IF_LOOPBACK) {
-
 // handled in acktrack_parsepacket()
 /*
+        if (d->flags & PCAP_IF_LOOPBACK) {
+
 #ifdef WIN32
             // I think this is a windows-specific thing ... ?
             descr[i].headerlen = 4; // ???
 #else
             descr[i].headerlen = 14;
 #endif
-*/
             logmsg("%s is loopback, thus headerlen 4", d->name);
         } else {
             logmsg("%s is ethernet, thus headerlen 14", d->name);
             descr[i].headerlen = 14;
             }
+*/
 
         if(descr[i].handle == NULL) {
             logmsg("pcap_open_live failed for interface %s", d->name);
