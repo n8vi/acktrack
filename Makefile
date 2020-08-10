@@ -1,9 +1,11 @@
 CFLAGS=-ggdb
+# CFLAGS=-ggdb -Wall -Wextra -Wformat-nonliteral -Wcast-align -Wpointer-arith -Wbad-function-cast -Wmissing-prototypes -Wstrict-prototypes -Wmissing-declarations -Winline -Wundef -Wnested-externs -Wcast-qual -Wshadow -Wwrite-strings -Wno-unused-parameter -Wfloat-equal -pedantic -ansi
 DESTDIR=/usr/local
 SUDO?=sudo
 SRCDIR=$(shell pwd)
 PROJECT=$(notdir $(SRCDIR))
 PROJDESC="A cross-platform library for keeping track of TCP ACKs in response to data sent on a socket."
+CC=cc $(CFLAGS)
 
 all: libacktrack.so demo
 
@@ -15,10 +17,12 @@ clean:
 	rm -fr *.o *.so $(PROJECT) *.deb
 
 acktrack.o: acktrack.cpp
-	gcc -fPIC -c acktrack.cpp
+	# gcc -fPIC -c acktrack.cpp
+	$(CC) -fPIC -c acktrack.cpp
 
 libacktrack.so: acktrack.o
-	gcc -shared -o libacktrack.so acktrack.o -lpcap
+	# gcc -shared -o libacktrack.so acktrack.o -lpcap
+	$(CC) -shared -o libacktrack.so acktrack.o -lpcap
 
 install: libacktrack.so
 	$(SUDO) cp libacktrack.so $(DESTDIR)/lib/
