@@ -53,6 +53,8 @@ int main(int argc, char* argv[])
     int i = 0;
     char buffer[256];
 
+    struct addrinfo hints, *res;
+
     int iResult;
 
 #ifdef LOGFILE
@@ -77,25 +79,37 @@ int main(int argc, char* argv[])
         fprintf(stderr, "usage %s hostname port\n", argv[0]);
         exit(0);
     }
-    portno = atoi(argv[2]);
-    sockfd = socket(AF_INET, SOCK_STREAM, 0);
+    // portno = atoi(argv[2]);
+
+    memset(&hints, 0, sizeof(hints));
+
+    hints.ai_socktype = SOCK_STREAM;
+
+    iResult = getaddrinfo(argv[1], argv[2], &hints, &res);
+
+    if (iResult) {
+        perror("getaddrinfo()");
+        exit(1);
+        }
+
+    sockfd = socket(res->ai_family, res->ai_socktype, res->ai_protocol);
+
     if (sockfd < 0)
         error((char*)"ERROR opening socket");
 
-    printf("Connecting to host %s port %d\n", argv[1], portno);
-    server = gethostbyname(argv[1]);
-    if (server == NULL) {
-        fprintf(stderr, "ERROR, no such host\n");
-        exit(1);
-    }
+    printf("Connecting to host %s port %s\n", argv[1], argv[2]);
+
+
+/*
     bzero((char*)&serv_addr, sizeof(serv_addr));
-    serv_addr.sin_family = AF_INET;
+    serv_addr.sin_family = res->ai_family;
     bcopy((char*)server->h_addr,
         (char*)&serv_addr.sin_addr.s_addr,
         server->h_length);
     serv_addr.sin_port = htons(portno);
+*/
 
-    if (connect(sockfd, (struct sockaddr*) & serv_addr, sizeof(serv_addr)) < 0)
+    if (connect(sockfd, res->ai_addr, res->ai_addrlen) < 0)
         error((char*)"ERROR connecting");
 
     acktrack = acktrack_create(sockfd);
