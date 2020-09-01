@@ -5,6 +5,15 @@ import subprocess
 import sys
 import os
 
+if len(sys.argv) > 2:
+    print("Invalid arguments")
+    sys.exit(1)
+
+host = "127.0.0.1"
+
+if len(sys.argv) > 1:
+    host = sys.argv[1]
+
 cdemo = os.path.join(sys.path[0], "cdemo")
 if not os.path.isfile(cdemo):
     cdemo += ".exe"
@@ -16,13 +25,13 @@ s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 s.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
 for port in range (8000,8100):
     try:
-        s.bind(('127.0.0.1', port))
+        s.bind((host, port))
         break
     except OSError:
         pass
 s.listen(1)
 print("\nlistening")
-p = subprocess.Popen([cdemo, '127.0.0.1', str(port)])
+p = subprocess.Popen([cdemo, host, str(port)])
 print("client running")
 conn, addr = s.accept()
 print("connection accepted")
