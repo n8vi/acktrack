@@ -352,13 +352,13 @@ void CDECL acktrack_parsepacket(acktrack_t* acktrack, const struct pcap_pkthdr* 
 
     buf = (u_char*)(packet + skiplen);
 
-    if (acktrack->remote.ss_family = AF_INET) {
+    if (acktrack->remote.ss_family == AF_INET) {
         printf("\nipv4\n");
         ih4 = (ip4_header*)(buf);
         ip_len = (ih4->ver_ihl & 0xf) * 4;
         th = (tcp_header*)((u_char*)ih4 + ip_len);
         plen = ntohs(ih4->tlen)-ip_len;
-    } else if (acktrack->remote.ss_family = AF_INET6) {
+    } else if (acktrack->remote.ss_family == AF_INET6) {
         printf("\nipv6\n");
         ih6 = (ip6_header*)(buf);
         if (ntohs(ih6->next_header) != 6) {
