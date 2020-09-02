@@ -383,7 +383,7 @@ void CDECL acktrack_parsepacket(acktrack_t* acktrack, const struct pcap_pkthdr* 
         // if (ntohs(ih6->next_header) != 6) {
         if (ih6->next_header != 6) {
             logmsg("ACKTRACK_NEXT: GOT NON-TCP packet");
-            printf("ACKTRACK_NEXT: GOT NON-TCP packet");
+            // printf("ACKTRACK_NEXT: GOT NON-TCP packet");
             /*
             printf(" ACKTRACK_NEXT: GOT NON-TCP packet\n");
             printf("    var_class_flowlabel: %x\n", ih6->ver_class_flowlabel);
@@ -397,15 +397,12 @@ void CDECL acktrack_parsepacket(acktrack_t* acktrack, const struct pcap_pkthdr* 
             }
         //printf("okay, TCP\n");
         th = (tcp_header*)((u_char*)ih6 + 40); /* FIXME THIS DOES NOT HANDLE EXTENSION HEADERS */
-        printf("  sp:%d\n  dp: %d\n  seq: %u\n  ack: %u\n", ntohs(th->sport), ntohs(th->dport), ntohl(th->seq_number), ntohl(th->ack_number));
+        // printf("  sp:%d\n  dp: %d\n  seq: %u\n  ack: %u\n", ntohs(th->sport), ntohs(th->dport), ntohl(th->seq_number), ntohl(th->ack_number));
         // printf("%p %p\n", ih6, th);
         plen = ntohs(ih6->payload_len);
-        printf("1\n");
     } else {
         //printf(" unknown proto\n");
         }
-
-    printf("2\n");
 
     // dumpendpoint((sockaddr*)&(acktrack->local));
     // dumpendpoint((sockaddr*)&(acktrack->remote));
@@ -426,8 +423,6 @@ void CDECL acktrack_parsepacket(acktrack_t* acktrack, const struct pcap_pkthdr* 
     tcp_len = ((orfw & 0xf0000000) >> 28) * 4;
     // datalen = ntohs(ih4->tlen) - tcp_len - ip_len;
     datalen = plen - tcp_len;
-
-    printf("3\n");
 
     if (orfw & FINFLAG) {
         datalen++;
@@ -450,9 +445,8 @@ void CDECL acktrack_parsepacket(acktrack_t* acktrack, const struct pcap_pkthdr* 
         event_data->has_urg = 1;
     }
 
-    printf("4\n");
-
-    logmsg("acktrack_parsepacket(): %s:%d -> %s:%d", inet_ntoa(ih4->saddr), ntohs(th->sport), inet_ntoa(ih4->daddr), ntohs(th->dport));
+    // FIXME: explodes on IPv6
+    // logmsg("acktrack_parsepacket(): %s:%d -> %s:%d", inet_ntoa(ih4->saddr), ntohs(th->sport), inet_ntoa(ih4->daddr), ntohs(th->dport));
 
     if (!acktrack->gotorigpkt) {
         /* TODO: perhaps assert following "should" */
@@ -460,17 +454,26 @@ void CDECL acktrack_parsepacket(acktrack_t* acktrack, const struct pcap_pkthdr* 
         
         acktrack->lseqorig = absseqno - 1;
         acktrack->rseqorig = absackno - 1;
-        memcpy(&acktrack->origtime, &pkthdr->ts, sizeof(struct timeval));
+        memcpy(&(acktrack->origtime), &pkthdr->ts, sizeof(struct timeval));
         acktrack->gotorigpkt = 1;
-        islpkt = 1;
+        // islpkt = 1;
     }
-    else if (!memcmp((void *)&(((struct sockaddr_in*)(&acktrack->local))->sin_addr), (void*)&(ih4->saddr), sizeof(struct in_addr)) && th->sport == ((struct sockaddr_in *)&(acktrack->local))->sin_port) {
-        islpkt = 1;
+    // printf("ip4\n");
+    if (acktrack->remote.ss_family == AF_INET) {
+        if (!memcmp((void *)&(((struct sockaddr_in*)(&acktrack->local))->sin_addr), (void*)&(ih4->saddr), sizeof(struct in_addr)) && th->sport == ((struct sockaddr_in *)&(acktrack->local))->sin_port) {
+            islpkt = 1;
+        }
     }
+    // printf("ip6\n");
+    if (acktrack->remote.ss_family == AF_INET6) {
+        if (!memcmp((void *)&(((struct sockaddr_in6*)(&acktrack->local))->sin6_addr), (void*)&(ih6->saddr), sizeof(struct in_addr)) && th->sport == ((struct sockaddr_in6 *)&(acktrack->local))->sin6_port) {
+            islpkt = 1;
+        }
+    }
+    // printf("whoo\n");
     
     acktrack->lastpktislocal = islpkt;
 
-    printf("4.5\n");
 
     relseqno = relseq(acktrack, absseqno, islpkt);
     relackno = relseq(acktrack, absackno, !islpkt);
@@ -495,7 +498,6 @@ void CDECL acktrack_parsepacket(acktrack_t* acktrack, const struct pcap_pkthdr* 
         }
     }
 
-    printf("5\n");
 
     if (orfw & FINFLAG) {
         if (islpkt) {
@@ -513,20 +515,23 @@ void CDECL acktrack_parsepacket(acktrack_t* acktrack, const struct pcap_pkthdr* 
     }
 
     if (gotlack) {
+        // printf("  gotlack, so remote\n");
         memcpy(&event_data->ts, &pkthdr->ts, sizeof(struct timeval));
         event_data->is_local = 0;
         event_data->seqno = relackno;
         event_data->is_interesting = 1;
     }
     else if (islpkt && datalen > 0) {
+        // printf("  islpkt, so local\n");
         memcpy(&event_data->ts, &pkthdr->ts, sizeof(struct timeval));
         event_data->is_local = 1;
         event_data->seqno = relseqno + datalen;
         event_data->is_interesting = 1;
+    } else {
+        // printf("  dunno direction\n");
     }
     logmsg("   --> is_local=%d seqno=%d is_interesting=%d, len=%d", event_data->is_local, event_data->seqno, event_data->is_interesting, datalen);
 
-    printf("6\n");
 
 }
 
@@ -673,10 +678,10 @@ int acktrack_opencap(acktrack_t *acktrack)
         lipstr, ntohs(lport), ripstr, ntohs(rport),
         ripstr, ntohs(rport), lipstr, ntohs(lport));
         
-    printf("\nfilter: %s\n", filter);
+    // printf("\nfilter: %s\n", filter);
     logmsg("filter: %s", filter);
 
-    sleep(15);
+    // sleep(15);
 
     if (acktrack->remote.ss_family != AF_INET && acktrack->remote.ss_family != AF_INET6) { // We will need to update this to add ipv6
         logmsg("Socket is not ipv4 or ipv6");
