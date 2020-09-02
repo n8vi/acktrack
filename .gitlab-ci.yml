@@ -18,7 +18,7 @@ lintest:
     stage: test
     needs: ["linbuild"]
     script:
-        - apt-get update -qq && apt-get install -y -qq libpcap-dev
+        - apt-get update -qq && apt-get install -y -qq libpcap-dev miredo
         - make citest
 
 winbuild:
