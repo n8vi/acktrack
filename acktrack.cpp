@@ -38,7 +38,7 @@ typedef struct ip4_header{
     u_int   op_pad;         // Option + Padding
 }ip4_header;
 
-typedef struct ip6_header{
+typedef struct __attribute__((__packed__)) ip6_header{
     u_long ver_class_flowlabel; // Version (4 bits) + traffic class (8 bits) + flow label (20 bits)
     u_short payload_len;        // Length of payload plus any extension headers
     u_char next_header;         // Type of next header
@@ -116,6 +116,28 @@ char *get_ip_str(const struct sockaddr *sa)
 
     return s;
 }
+
+char *get_family(const struct sockaddr *sa)
+{
+    static char ipv4[] = "ipv4";
+    static char ipv6[] = "ipv6";
+    switch(sa->sa_family) {
+        case AF_INET:
+            return ipv4;
+            break;
+        case AF_INET6:
+            return ipv6;
+            break;
+        default:
+            return NULL;
+        }
+}
+
+void dumpendpoint(sockaddr *sa)
+{
+    printf("%s - [%s]:%d\n", get_family(sa), get_ip_str(sa), ntohs(get_port(sa)));
+}
+
 
 struct sockaddr *parseendpoint(char* endpoint)
 {
@@ -276,6 +298,7 @@ void CDECL acktrack_parsepacket(acktrack_t* acktrack, const struct pcap_pkthdr* 
     u_char *buf;
     int skiplen = 14; // ethernet by default
     u_short plen;
+    int i;
 
     struct sockaddr_in *sin;
 
@@ -330,11 +353,13 @@ void CDECL acktrack_parsepacket(acktrack_t* acktrack, const struct pcap_pkthdr* 
     buf = (u_char*)(packet + skiplen);
 
     if (acktrack->remote.ss_family = AF_INET) {
+        printf("\nipv4\n");
         ih4 = (ip4_header*)(buf);
         ip_len = (ih4->ver_ihl & 0xf) * 4;
         th = (tcp_header*)((u_char*)ih4 + ip_len);
         plen = ntohs(ih4->tlen)-ip_len;
     } else if (acktrack->remote.ss_family = AF_INET6) {
+        printf("\nipv6\n");
         ih6 = (ip6_header*)(buf);
         if (ntohs(ih6->next_header) != 6) {
             logmsg("ACKTRACK_NEXT: GOT NON-TCP packet");
@@ -343,8 +368,26 @@ void CDECL acktrack_parsepacket(acktrack_t* acktrack, const struct pcap_pkthdr* 
             return;
             }
         th = (tcp_header*)((u_char*)ih6 + 40); /* FIXME THIS DOES NOT HANDLE EXTENSION HEADERS */
+        printf("%p %p\n", ih6, th);
         plen = ntohs(ih6->payload_len);
         }
+
+    dumpendpoint((sockaddr*)&(acktrack->local));
+    dumpendpoint((sockaddr*)&(acktrack->remote));
+
+    // printf("plen = %d\n", plen);
+
+    printf("\n\n-=-[%.6d]-=->", plen);
+    for (i=0; i<32; i++) {
+        printf("%.2x ", ((unsigned char *)buf)[i]);
+        }
+    printf("\n");
+
+    printf("  \\-=->", plen);
+    for (i=0; i<32; i++) {
+        printf("%.2x ", ((unsigned char *)th)[i]);
+        }
+    printf("\n");
 
     orfw = htonl(th->offset_reserved_flags_window);
 
@@ -765,6 +808,9 @@ acktrack_t* CDECL acktrack_create(int sck)
 
         return NULL;
         }
+
+    dumpendpoint((sockaddr*)&(ret->local));
+    dumpendpoint((sockaddr*)&(ret->remote));
 
     acktrack_opencap(ret);
 

@@ -21,7 +21,9 @@ if not os.path.isfile(cdemo):
     print("Test code must be compiled prior to running test.")
     sys.exit(1)
 
-s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+addr = socket.getaddrinfo(host, 0,0, socket.SOCK_STREAM)
+af,socktype, proto, canonname, sa = addr[0]
+s = socket.socket(af, socket.SOCK_STREAM)
 s.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
 for port in range (8000,8100):
     try:
