@@ -15,6 +15,7 @@ linbuild:
             - cdemo/cdemo
 
 lintest:
+    image: debian:stable
     stage: test
     needs: ["linbuild"]
     script:
