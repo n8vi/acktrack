@@ -38,8 +38,8 @@ typedef struct ip4_header{
     u_int   op_pad;         // Option + Padding
 }ip4_header;
 
-typedef struct __attribute__((__packed__)) ip6_header{
-    u_long ver_class_flowlabel; // Version (4 bits) + traffic class (8 bits) + flow label (20 bits)
+typedef struct ip6_header{
+    u_int ver_class_flowlabel; // Version (4 bits) + traffic class (8 bits) + flow label (20 bits)
     u_short payload_len;        // Length of payload plus any extension headers
     u_char next_header;         // Type of next header
     u_char hop_limit;           // What it says on the tin
@@ -302,8 +302,6 @@ void CDECL acktrack_parsepacket(acktrack_t* acktrack, const struct pcap_pkthdr* 
 
     struct sockaddr_in *sin;
 
-    printf("*");
-    fflush(stdout);
 
     bzero(event_data, sizeof(sequence_event_t));
 
@@ -355,43 +353,67 @@ void CDECL acktrack_parsepacket(acktrack_t* acktrack, const struct pcap_pkthdr* 
 
     buf = (u_char*)(packet + skiplen);
 
+/*
+    printf("GOTPKT: ");
+
+    for (i=0; i<40; i++) {
+        printf("%.2x ", ((unsigned char *)buf)[i]);
+        }
+    printf("\n");
+
+    printf("  \\-=->");
+    for (i=0; i<16; i++) {
+        printf("%.2x ", ((unsigned char *)th)[i]);
+        }
+    printf("\n");
+
+*/
+
+    fflush(stdout);
+
     if (acktrack->remote.ss_family == AF_INET) {
-        // printf("\nipv4\n");
+        // printf(" ipv4\n");
         ih4 = (ip4_header*)(buf);
         ip_len = (ih4->ver_ihl & 0xf) * 4;
         th = (tcp_header*)((u_char*)ih4 + ip_len);
         plen = ntohs(ih4->tlen)-ip_len;
     } else if (acktrack->remote.ss_family == AF_INET6) {
-        // printf("\nipv6\n");
+        // printf(" ipv6\n");
         ih6 = (ip6_header*)(buf);
-        if (ntohs(ih6->next_header) != 6) {
+        // if (ntohs(ih6->next_header) != 6) {
+        if (ih6->next_header != 6) {
             logmsg("ACKTRACK_NEXT: GOT NON-TCP packet");
+            printf("ACKTRACK_NEXT: GOT NON-TCP packet");
+            /*
+            printf(" ACKTRACK_NEXT: GOT NON-TCP packet\n");
+            printf("    var_class_flowlabel: %x\n", ih6->ver_class_flowlabel);
+            printf("            payload_len: %x\n", ih6->payload_len);
+            printf("            next_header: %x\n", ih6->next_header);
+            printf("              hop_limit: %x\n", ih6->hop_limit);
+            */
             event_data->is_error = 1;
             event_data->is_interesting = 0;
             return;
             }
+        //printf("okay, TCP\n");
         th = (tcp_header*)((u_char*)ih6 + 40); /* FIXME THIS DOES NOT HANDLE EXTENSION HEADERS */
+        printf("  sp:%d\n  dp: %d\n  seq: %u\n  ack: %u\n", ntohs(th->sport), ntohs(th->dport), ntohl(th->seq_number), ntohl(th->ack_number));
         // printf("%p %p\n", ih6, th);
         plen = ntohs(ih6->payload_len);
+        printf("1\n");
+    } else {
+        //printf(" unknown proto\n");
         }
+
+    printf("2\n");
 
     // dumpendpoint((sockaddr*)&(acktrack->local));
     // dumpendpoint((sockaddr*)&(acktrack->remote));
 
     // printf("plen = %d\n", plen);
 
-    printf("\n\n-=-[%.6d]-=->", plen);
+    // printf("-=-[%.6d]x-=->", plen);
     
-    for (i=0; i<32; i++) {
-        printf("%.2x ", ((unsigned char *)buf)[i]);
-        }
-    printf("\n");
-
-    printf("  \\-=->");
-    for (i=0; i<32; i++) {
-        printf("%.2x ", ((unsigned char *)th)[i]);
-        }
-    printf("\n");
 
     orfw = htonl(th->offset_reserved_flags_window);
 
@@ -404,6 +426,8 @@ void CDECL acktrack_parsepacket(acktrack_t* acktrack, const struct pcap_pkthdr* 
     tcp_len = ((orfw & 0xf0000000) >> 28) * 4;
     // datalen = ntohs(ih4->tlen) - tcp_len - ip_len;
     datalen = plen - tcp_len;
+
+    printf("3\n");
 
     if (orfw & FINFLAG) {
         datalen++;
@@ -426,6 +450,8 @@ void CDECL acktrack_parsepacket(acktrack_t* acktrack, const struct pcap_pkthdr* 
         event_data->has_urg = 1;
     }
 
+    printf("4\n");
+
     logmsg("acktrack_parsepacket(): %s:%d -> %s:%d", inet_ntoa(ih4->saddr), ntohs(th->sport), inet_ntoa(ih4->daddr), ntohs(th->dport));
 
     if (!acktrack->gotorigpkt) {
@@ -444,6 +470,7 @@ void CDECL acktrack_parsepacket(acktrack_t* acktrack, const struct pcap_pkthdr* 
     
     acktrack->lastpktislocal = islpkt;
 
+    printf("4.5\n");
 
     relseqno = relseq(acktrack, absseqno, islpkt);
     relackno = relseq(acktrack, absackno, !islpkt);
@@ -467,6 +494,8 @@ void CDECL acktrack_parsepacket(acktrack_t* acktrack, const struct pcap_pkthdr* 
             gotlack = 1;
         }
     }
+
+    printf("5\n");
 
     if (orfw & FINFLAG) {
         if (islpkt) {
@@ -496,6 +525,8 @@ void CDECL acktrack_parsepacket(acktrack_t* acktrack, const struct pcap_pkthdr* 
         event_data->is_interesting = 1;
     }
     logmsg("   --> is_local=%d seqno=%d is_interesting=%d, len=%d", event_data->is_local, event_data->seqno, event_data->is_interesting, datalen);
+
+    printf("6\n");
 
 }
 
