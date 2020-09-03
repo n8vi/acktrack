@@ -15,7 +15,7 @@ linbuild:
             - cdemo/cdemo
 
 lintest:
-    image: debian:stable
+    image: biinilya/miredo
     stage: test
     needs: ["linbuild"]
     script:
