@@ -15,7 +15,7 @@ linbuild:
             - cdemo/cdemo
 
 lintest:
-    image: biinilya/miredo
+    image: ubuntu
     stage: test
     needs: ["linbuild"]
     script:
