@@ -603,7 +603,7 @@ sequence_event_t *acktrack_next(acktrack_t *acktrack)
             break;
         case 1: // Got a packet
             logmsg("ACKTRACK_NEXT: GOT A PACKET");
-            printf("pcap_next_ex(...%x)", acktrack->curcap->handle);
+            printf(" -->packet on %x", acktrack->curcap->handle);
             acktrack_parsepacket(acktrack, pkthdr, packet, &ret);
             break;
         case PCAP_ERROR: // got an error
@@ -617,7 +617,7 @@ sequence_event_t *acktrack_next(acktrack_t *acktrack)
             acktrack->curcap = acktrack->caps;
     } while (acktrack->curcap != orig && !ret.is_interesting);
 
-    printf("\n");
+    // printf("\n");
 
     return &ret;
 }
