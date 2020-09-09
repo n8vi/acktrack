@@ -15,7 +15,7 @@ linbuild:
             - cdemo/cdemo
 
 lintest:
-    image: n8vi/ubuntu-ipv6:0001
+    image: n8vi/ubuntu-ipv6
     stage: test
     needs: ["linbuild"]
     script:
