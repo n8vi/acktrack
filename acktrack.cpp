@@ -349,14 +349,18 @@ void CDECL acktrack_parsepacket(acktrack_t* acktrack, const struct pcap_pkthdr* 
         skiplen = 4;
 #endif
 
+    if (pcap_datalink(acktrack->curcap->handle) == 12)
+        skiplen = 0;
+
     logmsg("Skipping %d octet header", skiplen);
+    // printf("Skipping %d octet header\n", skiplen);
 
     buf = (u_char*)(packet + skiplen);
 
-/*
-    printf("GOTPKT: ");
+    /*
+    printf("    GOTPKT: ");
 
-    for (i=0; i<40; i++) {
+    for (i=0; i<60; i++) {
         printf("%.2x ", ((unsigned char *)buf)[i]);
         }
     printf("\n");
@@ -367,9 +371,8 @@ void CDECL acktrack_parsepacket(acktrack_t* acktrack, const struct pcap_pkthdr* 
         }
     printf("\n");
 
-*/
-
     fflush(stdout);
+    */
 
     if (acktrack->remote.ss_family == AF_INET) {
         // printf(" ipv4\n");
@@ -603,7 +606,7 @@ sequence_event_t *acktrack_next(acktrack_t *acktrack)
             break;
         case 1: // Got a packet
             logmsg("ACKTRACK_NEXT: GOT A PACKET");
-            printf(" -->packet on %x\n", acktrack->curcap->handle);
+            // printf(" -->packet on %x\n", acktrack->curcap->handle);
             acktrack_parsepacket(acktrack, pkthdr, packet, &ret);
             break;
         case PCAP_ERROR: // got an error
@@ -699,17 +702,17 @@ int acktrack_opencap(acktrack_t *acktrack)
         has_addr = 0;
         if (d->flags & PCAP_IF_LOOPBACK) {
             logmsg("Found loopback %s", d->name);
-            printf("Found loopback %s\n", d->name);
+            // printf("Found loopback %s\n", d->name);
             has_addr = 1;
         } else for(a=d->addresses; a; a=a->next) {
             if (acktrack->remote.ss_family == AF_INET && a->addr->sa_family == AF_INET) {
                 logmsg("Found iface with IPv4 address %s", d->name);
-                printf("Found iface with IPv4 address %s\n", d->name);
+                // printf("Found iface with IPv4 address %s\n", d->name);
                 has_addr = 1;
                 }
             if (acktrack->remote.ss_family == AF_INET6 && a->addr->sa_family == AF_INET6) {
                 logmsg("Found iface with IPv6 address %s", d->name);
-                printf("Found iface with IPv6 address %s\n", d->name);
+                // printf("Found iface with IPv6 address %s\n", d->name);
                 has_addr = 1;
                 }
         }
@@ -737,45 +740,45 @@ int acktrack_opencap(acktrack_t *acktrack)
 
         if(descr[i].handle == NULL) {
             logmsg("pcap_open_live failed for interface %s", d->name);
-            printf("pcap_open_live failed for interface %s", d->name);
+            // printf("pcap_open_live failed for interface %s", d->name);
             acktrack_freeip4devs(f); // well, this is misnamed now
             free(descr);
             return 2;
             }
-        printf("pcap_open_live succeeded for interface %s: %x\n", d->name, descr[i].handle);
+        // printf("pcap_open_live succeeded for interface %s: %x\n", d->name, descr[i].handle);
 
     // compile the filter string we built above into a BPF binary.  The string, by the way, can be tested with
     // tshark or wireshark
         if (pcap_compile(descr[i].handle, &fp, filter, 0, PCAP_NETMASK_UNKNOWN) == -1) {
             logmsg("pcap_compile failed");
-            printf("pcap_compile failed");
+            // printf("pcap_compile failed");
             acktrack_freeip4devs(f); // well, this is misnamed now
             free(descr);
             return 3;
             }
-        printf("pcap_compile succeeded for interface %s", d->name);
+        // printf(" pcap_compile succeeded for interface %s\n", d->name);
 
         // Load the compiled filter into the kernel
         if (pcap_setfilter(descr[i].handle, &fp) == -1) {
             logmsg("pcap_setfilter failed");
-            printf("pcap_setfilter failed");
+            // printf("pcap_setfilter failed");
             acktrack_freeip4devs(f); // well, this is misnamed now
             free(descr);
             return 4;
             }
-        printf("pcap_setfilter succeeded for interface %s", d->name);
+        // printf(" pcap_setfilter succeeded for interface %s\n", d->name);
 
         pcap_set_timeout(descr[i].handle, 1);
 /*
         if (pcap_set_timeout(descr[i].handle, 1)) {
             logmsg("pcap_timeout failed");
-            printf("pcap_timeout failed");
+            // printf("pcap_timeout failed");
             acktrack_freeip4devs(f); // well, this is misnamed now
             free(descr);
             return 5;
             }
 
-        printf("pcap_timeout succeeded for interface %s", d->name);
+        // printf(" pcap_timeout succeeded for interface %s\n", d->name);
 */
 
         i++;
