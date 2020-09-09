@@ -594,7 +594,7 @@ sequence_event_t *acktrack_next(acktrack_t *acktrack)
         logmsg("pcap_next_ex(.%x)", acktrack);
         logmsg("pcap_next_ex(..%x)", acktrack->curcap);
         logmsg("pcap_next_ex(...%x)", acktrack->curcap->handle);
-        printf("pcap_next_ex(...%x)", acktrack->curcap->handle);
+        // printf("pcap_next_ex(...%x)", acktrack->curcap->handle);
         result = pcap_next_ex(acktrack->curcap->handle, &pkthdr, &packet);
         switch (result) {
         case 0: // timeout expired
@@ -603,6 +603,7 @@ sequence_event_t *acktrack_next(acktrack_t *acktrack)
             break;
         case 1: // Got a packet
             logmsg("ACKTRACK_NEXT: GOT A PACKET");
+            printf("pcap_next_ex(...%x)", acktrack->curcap->handle);
             acktrack_parsepacket(acktrack, pkthdr, packet, &ret);
             break;
         case PCAP_ERROR: // got an error
