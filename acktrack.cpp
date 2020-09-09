@@ -616,6 +616,8 @@ sequence_event_t *acktrack_next(acktrack_t *acktrack)
             acktrack->curcap = acktrack->caps;
     } while (acktrack->curcap != orig && !ret.is_interesting);
 
+    printf("\n");
+
     return &ret;
 }
 
