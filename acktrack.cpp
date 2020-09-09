@@ -133,12 +133,6 @@ char *get_family(const struct sockaddr *sa)
         }
 }
 
-void dumpendpoint(sockaddr *sa)
-{
-    printf("%s - [%s]:%d\n", get_family(sa), get_ip_str(sa), ntohs(get_port(sa)));
-}
-
-
 struct sockaddr *parseendpoint(char* endpoint)
 {
     static struct sockaddr_storage sas;
@@ -349,11 +343,10 @@ void CDECL acktrack_parsepacket(acktrack_t* acktrack, const struct pcap_pkthdr* 
         skiplen = 4;
 #endif
 
-    if (pcap_datalink(acktrack->curcap->handle) == 12)
+    if (pcap_datalink(acktrack->curcap->handle) == DLT_RAW)
         skiplen = 0;
 
     logmsg("Skipping %d octet header", skiplen);
-    // printf("Skipping %d octet header\n", skiplen);
 
     buf = (u_char*)(packet + skiplen);
 
@@ -375,45 +368,24 @@ void CDECL acktrack_parsepacket(acktrack_t* acktrack, const struct pcap_pkthdr* 
     */
 
     if (acktrack->remote.ss_family == AF_INET) {
-        // printf(" ipv4\n");
         ih4 = (ip4_header*)(buf);
         ip_len = (ih4->ver_ihl & 0xf) * 4;
         th = (tcp_header*)((u_char*)ih4 + ip_len);
         plen = ntohs(ih4->tlen)-ip_len;
     } else if (acktrack->remote.ss_family == AF_INET6) {
-        // printf(" ipv6\n");
         ih6 = (ip6_header*)(buf);
         // if (ntohs(ih6->next_header) != 6) {
         if (ih6->next_header != 6) {
             logmsg("ACKTRACK_NEXT: GOT NON-TCP packet");
-            // printf("ACKTRACK_NEXT: GOT NON-TCP packet");
-            /*
-            printf(" ACKTRACK_NEXT: GOT NON-TCP packet\n");
-            printf("    var_class_flowlabel: %x\n", ih6->ver_class_flowlabel);
-            printf("            payload_len: %x\n", ih6->payload_len);
-            printf("            next_header: %x\n", ih6->next_header);
-            printf("              hop_limit: %x\n", ih6->hop_limit);
-            */
             event_data->is_error = 1;
             event_data->is_interesting = 0;
             return;
             }
-        //printf("okay, TCP\n");
         th = (tcp_header*)((u_char*)ih6 + 40); /* FIXME THIS DOES NOT HANDLE EXTENSION HEADERS */
-        // printf("  sp:%d\n  dp: %d\n  seq: %u\n  ack: %u\n", ntohs(th->sport), ntohs(th->dport), ntohl(th->seq_number), ntohl(th->ack_number));
-        // printf("%p %p\n", ih6, th);
         plen = ntohs(ih6->payload_len);
     } else {
-        //printf(" unknown proto\n");
+        logmsg(" unknown proto\n");
         }
-
-    // dumpendpoint((sockaddr*)&(acktrack->local));
-    // dumpendpoint((sockaddr*)&(acktrack->remote));
-
-    // printf("plen = %d\n", plen);
-
-    // printf("-=-[%.6d]x-=->", plen);
-    
 
     orfw = htonl(th->offset_reserved_flags_window);
 
@@ -461,19 +433,16 @@ void CDECL acktrack_parsepacket(acktrack_t* acktrack, const struct pcap_pkthdr* 
         acktrack->gotorigpkt = 1;
         // islpkt = 1;
     }
-    // printf("ip4\n");
     if (acktrack->remote.ss_family == AF_INET) {
         if (!memcmp((void *)&(((struct sockaddr_in*)(&acktrack->local))->sin_addr), (void*)&(ih4->saddr), sizeof(struct in_addr)) && th->sport == ((struct sockaddr_in *)&(acktrack->local))->sin_port) {
             islpkt = 1;
         }
     }
-    // printf("ip6\n");
     if (acktrack->remote.ss_family == AF_INET6) {
         if (!memcmp((void *)&(((struct sockaddr_in6*)(&acktrack->local))->sin6_addr), (void*)&(ih6->saddr), sizeof(struct in_addr)) && th->sport == ((struct sockaddr_in6 *)&(acktrack->local))->sin6_port) {
             islpkt = 1;
         }
     }
-    // printf("whoo\n");
     
     acktrack->lastpktislocal = islpkt;
 
@@ -518,20 +487,17 @@ void CDECL acktrack_parsepacket(acktrack_t* acktrack, const struct pcap_pkthdr* 
     }
 
     if (gotlack) {
-        // printf("  gotlack, so remote\n");
         memcpy(&event_data->ts, &pkthdr->ts, sizeof(struct timeval));
         event_data->is_local = 0;
         event_data->seqno = relackno;
         event_data->is_interesting = 1;
     }
     else if (islpkt && datalen > 0) {
-        // printf("  islpkt, so local\n");
         memcpy(&event_data->ts, &pkthdr->ts, sizeof(struct timeval));
         event_data->is_local = 1;
         event_data->seqno = relseqno + datalen;
         event_data->is_interesting = 1;
     } else {
-        // printf("  dunno direction\n");
     }
     logmsg("   --> is_local=%d seqno=%d is_interesting=%d, len=%d", event_data->is_local, event_data->seqno, event_data->is_interesting, datalen);
 
@@ -597,7 +563,6 @@ sequence_event_t *acktrack_next(acktrack_t *acktrack)
         logmsg("pcap_next_ex(.%x)", acktrack);
         logmsg("pcap_next_ex(..%x)", acktrack->curcap);
         logmsg("pcap_next_ex(...%x)", acktrack->curcap->handle);
-        // printf("pcap_next_ex(...%x)", acktrack->curcap->handle);
         result = pcap_next_ex(acktrack->curcap->handle, &pkthdr, &packet);
         switch (result) {
         case 0: // timeout expired
@@ -606,7 +571,6 @@ sequence_event_t *acktrack_next(acktrack_t *acktrack)
             break;
         case 1: // Got a packet
             logmsg("ACKTRACK_NEXT: GOT A PACKET");
-            // printf(" -->packet on %x\n", acktrack->curcap->handle);
             acktrack_parsepacket(acktrack, pkthdr, packet, &ret);
             break;
         case PCAP_ERROR: // got an error
@@ -619,8 +583,6 @@ sequence_event_t *acktrack_next(acktrack_t *acktrack)
         if (acktrack->curcap->handle == NULL)
             acktrack->curcap = acktrack->caps;
     } while (acktrack->curcap != orig && !ret.is_interesting);
-
-    // printf("\n");
 
     return &ret;
 }
@@ -685,10 +647,7 @@ int acktrack_opencap(acktrack_t *acktrack)
         lipstr, ntohs(lport), ripstr, ntohs(rport),
         ripstr, ntohs(rport), lipstr, ntohs(lport));
         
-    // printf("\nfilter: %s\n", filter);
     logmsg("filter: %s", filter);
-
-    // sleep(15);
 
     if (acktrack->remote.ss_family != AF_INET && acktrack->remote.ss_family != AF_INET6) { // We will need to update this to add ipv6
         logmsg("Socket is not ipv4 or ipv6");
@@ -702,17 +661,14 @@ int acktrack_opencap(acktrack_t *acktrack)
         has_addr = 0;
         if (d->flags & PCAP_IF_LOOPBACK) {
             logmsg("Found loopback %s", d->name);
-            // printf("Found loopback %s\n", d->name);
             has_addr = 1;
         } else for(a=d->addresses; a; a=a->next) {
             if (acktrack->remote.ss_family == AF_INET && a->addr->sa_family == AF_INET) {
                 logmsg("Found iface with IPv4 address %s", d->name);
-                // printf("Found iface with IPv4 address %s\n", d->name);
                 has_addr = 1;
                 }
             if (acktrack->remote.ss_family == AF_INET6 && a->addr->sa_family == AF_INET6) {
                 logmsg("Found iface with IPv6 address %s", d->name);
-                // printf("Found iface with IPv6 address %s\n", d->name);
                 has_addr = 1;
                 }
         }
@@ -740,46 +696,29 @@ int acktrack_opencap(acktrack_t *acktrack)
 
         if(descr[i].handle == NULL) {
             logmsg("pcap_open_live failed for interface %s", d->name);
-            // printf("pcap_open_live failed for interface %s", d->name);
             acktrack_freeip4devs(f); // well, this is misnamed now
             free(descr);
             return 2;
             }
-        // printf("pcap_open_live succeeded for interface %s: %x\n", d->name, descr[i].handle);
 
     // compile the filter string we built above into a BPF binary.  The string, by the way, can be tested with
     // tshark or wireshark
         if (pcap_compile(descr[i].handle, &fp, filter, 0, PCAP_NETMASK_UNKNOWN) == -1) {
             logmsg("pcap_compile failed");
-            // printf("pcap_compile failed");
             acktrack_freeip4devs(f); // well, this is misnamed now
             free(descr);
             return 3;
             }
-        // printf(" pcap_compile succeeded for interface %s\n", d->name);
 
         // Load the compiled filter into the kernel
         if (pcap_setfilter(descr[i].handle, &fp) == -1) {
             logmsg("pcap_setfilter failed");
-            // printf("pcap_setfilter failed");
             acktrack_freeip4devs(f); // well, this is misnamed now
             free(descr);
             return 4;
             }
-        // printf(" pcap_setfilter succeeded for interface %s\n", d->name);
 
         pcap_set_timeout(descr[i].handle, 1);
-/*
-        if (pcap_set_timeout(descr[i].handle, 1)) {
-            logmsg("pcap_timeout failed");
-            // printf("pcap_timeout failed");
-            acktrack_freeip4devs(f); // well, this is misnamed now
-            free(descr);
-            return 5;
-            }
-
-        // printf(" pcap_timeout succeeded for interface %s\n", d->name);
-*/
 
         i++;
         }
@@ -877,9 +816,6 @@ acktrack_t* CDECL acktrack_create(int sck)
 
         return NULL;
         }
-
-    // dumpendpoint((sockaddr*)&(ret->local));
-    // dumpendpoint((sockaddr*)&(ret->remote));
 
     acktrack_opencap(ret);
 
