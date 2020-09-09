@@ -548,7 +548,7 @@ void CDECL acktrack_callback(u_char* user, const struct pcap_pkthdr* pkthdr, con
         cb(acktrack, &event_data);
 }
 
-void CDECL acktrack_freeip4devs(pcap_if_t* f)
+void CDECL acktrack_freeip4devs(pcap_if_t* f) // well, this is misnamed now
 {
     pcap_if_t* n;
 
@@ -594,6 +594,7 @@ sequence_event_t *acktrack_next(acktrack_t *acktrack)
         logmsg("pcap_next_ex(.%x)", acktrack);
         logmsg("pcap_next_ex(..%x)", acktrack->curcap);
         logmsg("pcap_next_ex(...%x)", acktrack->curcap->handle);
+        printf("pcap_next_ex(...%x)", acktrack->curcap->handle);
         result = pcap_next_ex(acktrack->curcap->handle, &pkthdr, &packet);
         switch (result) {
         case 0: // timeout expired
@@ -733,30 +734,43 @@ int acktrack_opencap(acktrack_t *acktrack)
 
         if(descr[i].handle == NULL) {
             logmsg("pcap_open_live failed for interface %s", d->name);
-            acktrack_freeip4devs(f);
+            printf("pcap_open_live failed for interface %s", d->name);
+            acktrack_freeip4devs(f); // well, this is misnamed now
             free(descr);
             return 2;
             }
+        printf("pcap_open_live succeeded for interface %s: %d", d->name, descr[i].handle);
 
     // compile the filter string we built above into a BPF binary.  The string, by the way, can be tested with
     // tshark or wireshark
         if (pcap_compile(descr[i].handle, &fp, filter, 0, PCAP_NETMASK_UNKNOWN) == -1) {
             logmsg("pcap_compile failed");
-            acktrack_freeip4devs(f);
+            printf("pcap_compile failed");
+            acktrack_freeip4devs(f); // well, this is misnamed now
             free(descr);
             return 3;
             }
+        printf("pcap_compile succeeded for interface %s", d->name);
 
         // Load the compiled filter into the kernel
         if (pcap_setfilter(descr[i].handle, &fp) == -1) {
             logmsg("pcap_setfilter failed");
-            acktrack_freeip4devs(f);
+            printf("pcap_setfilter failed");
+            acktrack_freeip4devs(f); // well, this is misnamed now
             free(descr);
             return 4;
             }
+        printf("pcap_setfilter succeeded for interface %s", d->name);
 
-        pcap_set_timeout(descr[i].handle, 1);
-        // return value?
+        if (pcap_set_timeout(descr[i].handle, 1)) {
+            logmsg("pcap_timeout failed");
+            printf("pcap_timeout failed");
+            acktrack_freeip4devs(f); // well, this is misnamed now
+            free(descr);
+            return 5;
+            }
+
+        printf("pcap_timeout succeeded for interface %s", d->name);
 
         i++;
         }
@@ -765,7 +779,7 @@ int acktrack_opencap(acktrack_t *acktrack)
     descr[i].handle = NULL;
 
     pcap_freealldevs(alldevs);
-    acktrack_freeip4devs(f);
+    acktrack_freeip4devs(f); // well, this is misnamed now
 
     acktrack->caps = descr;
 
