@@ -762,6 +762,8 @@ int acktrack_opencap(acktrack_t *acktrack)
             }
         printf("pcap_setfilter succeeded for interface %s", d->name);
 
+        pcap_set_timeout(descr[i].handle, 1);
+/*
         if (pcap_set_timeout(descr[i].handle, 1)) {
             logmsg("pcap_timeout failed");
             printf("pcap_timeout failed");
@@ -771,6 +773,7 @@ int acktrack_opencap(acktrack_t *acktrack)
             }
 
         printf("pcap_timeout succeeded for interface %s", d->name);
+*/
 
         i++;
         }
