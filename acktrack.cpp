@@ -695,14 +695,17 @@ int acktrack_opencap(acktrack_t *acktrack)
         has_addr = 0;
         if (d->flags & PCAP_IF_LOOPBACK) {
             logmsg("Found loopback %s", d->name);
+            printf("Found loopback %s", d->name);
             has_addr = 1;
         } else for(a=d->addresses; a; a=a->next) {
             if (acktrack->remote.ss_family == AF_INET && a->addr->sa_family == AF_INET) {
                 logmsg("Found iface with IPv4 address %s\n", d->name);
+                printf("Found iface with IPv4 address %s\n", d->name);
                 has_addr = 1;
                 }
             if (acktrack->remote.ss_family == AF_INET6 && a->addr->sa_family == AF_INET6) {
                 logmsg("Found iface with IPv6 address %s\n", d->name);
+                printf("Found iface with IPv6 address %s\n", d->name);
                 has_addr = 1;
                 }
         }
