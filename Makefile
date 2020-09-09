@@ -32,10 +32,10 @@ uninstall:
 
 citest: all
 	# needs to run as root, sudo not included here as gitlab-ci doesn't have it.
-	LD_LIBRARY_PATH=$(CURDIR) cdemo/cdemo ipv4.google.com 80
-	LD_LIBRARY_PATH=$(CURDIR) cdemo/loopdemo.py 127.0.0.1
-	LD_LIBRARY_PATH=$(CURDIR) cdemo/loopdemo.py ::1
-	LD_LIBRARY_PATH=$(CURDIR) cdemo/cdemo 2607:f4b8:791::246 80
+	# LD_LIBRARY_PATH=$(CURDIR) cdemo/cdemo ipv4.google.com 80
+	# LD_LIBRARY_PATH=$(CURDIR) cdemo/loopdemo.py 127.0.0.1
+	# LD_LIBRARY_PATH=$(CURDIR) cdemo/loopdemo.py ::1
+	LD_LIBRARY_PATH=$(CURDIR) cdemo/cdemo ipv6.google.com 80
 
 test: all
         #
