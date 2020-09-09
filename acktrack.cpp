@@ -603,7 +603,7 @@ sequence_event_t *acktrack_next(acktrack_t *acktrack)
             break;
         case 1: // Got a packet
             logmsg("ACKTRACK_NEXT: GOT A PACKET");
-            printf(" -->packet on %x", acktrack->curcap->handle);
+            printf(" -->packet on %x\n", acktrack->curcap->handle);
             acktrack_parsepacket(acktrack, pkthdr, packet, &ret);
             break;
         case PCAP_ERROR: // got an error
@@ -699,16 +699,16 @@ int acktrack_opencap(acktrack_t *acktrack)
         has_addr = 0;
         if (d->flags & PCAP_IF_LOOPBACK) {
             logmsg("Found loopback %s", d->name);
-            printf("Found loopback %s", d->name);
+            printf("Found loopback %s\n", d->name);
             has_addr = 1;
         } else for(a=d->addresses; a; a=a->next) {
             if (acktrack->remote.ss_family == AF_INET && a->addr->sa_family == AF_INET) {
-                logmsg("Found iface with IPv4 address %s\n", d->name);
+                logmsg("Found iface with IPv4 address %s", d->name);
                 printf("Found iface with IPv4 address %s\n", d->name);
                 has_addr = 1;
                 }
             if (acktrack->remote.ss_family == AF_INET6 && a->addr->sa_family == AF_INET6) {
-                logmsg("Found iface with IPv6 address %s\n", d->name);
+                logmsg("Found iface with IPv6 address %s", d->name);
                 printf("Found iface with IPv6 address %s\n", d->name);
                 has_addr = 1;
                 }
@@ -742,7 +742,7 @@ int acktrack_opencap(acktrack_t *acktrack)
             free(descr);
             return 2;
             }
-        printf("pcap_open_live succeeded for interface %s: %d", d->name, descr[i].handle);
+        printf("pcap_open_live succeeded for interface %s: %x\n", d->name, descr[i].handle);
 
     // compile the filter string we built above into a BPF binary.  The string, by the way, can be tested with
     // tshark or wireshark
