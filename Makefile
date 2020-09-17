@@ -31,18 +31,20 @@ uninstall:
 	$(SUDO) rm -f $(DESTDIR)/lib/libacktrack.so
 
 citest: all
-	# needs to run as root, sudo not included here as gitlab-ci doesn't have it.
-	LD_LIBRARY_PATH=$(CURDIR) cdemo/cdemo ipv4.google.com 80
-	LD_LIBRARY_PATH=$(CURDIR) cdemo/loopdemo.py 127.0.0.1
-	LD_LIBRARY_PATH=$(CURDIR) cdemo/loopdemo.py ::1
-	LD_LIBRARY_PATH=$(CURDIR) cdemo/cdemo ipv6.google.com 80
+	# needs to run as root, sudo not included here as gitlab-ci/docker doesn't have it.
+	@echo
+	@LD_LIBRARY_PATH=$(CURDIR) cdemo/cdemo ipv4.google.com 80
+	@echo
+	@LD_LIBRARY_PATH=$(CURDIR) cdemo/loopdemo.py 127.0.0.1
+	@echo
+	@LD_LIBRARY_PATH=$(CURDIR) cdemo/loopdemo.py ::1
+	@echo
+	@LD_LIBRARY_PATH=$(CURDIR) cdemo/cdemo ipv6.google.com 80
+	@echo
 
 test: all
-        #
-	# make a connnection to google as a demo. 
-        #
-	# $(SUDO) gdb -ex='set env LD_LIBRARY_PATH $(CURDIR)' -ex=r --args cdemo/cdemo google.com 80
-	sudo make citest
+	# run test as root for interactive test
+	$(SUDO) make citest
 
 deb: libacktrack.so
 	mkdir -p $(PROJECT)/DEBIAN

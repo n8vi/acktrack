@@ -271,6 +271,37 @@ int CDECL acktrack_isfinished(acktrack_t *acktrack)
     return ret;
 }
 
+// nearly 100% swiped from dsniff
+int pcap_dloff(pcap_t *pd)
+{
+    int offset = -1;
+            
+    switch (pcap_datalink(pd)) {
+        case DLT_RAW:     // Teredo, for one example.  
+            offset = 0;      // No need for "ethertype" or hardware addresses
+        case DLT_EN10MB:  // 802.3 10bT, 802.3z 100bTX, 802.3ab 1000bT, etc
+            offset = 14;     // 6 octet source and dest mac plus 2 octet ethertype
+            break;
+        case DLT_IEEE802: // 802.5 Token ring (with a silly constant name)
+            offset = 22;     // Probably will never be used, but it was in dsniff, so why the hell not
+            break;
+        case DLT_FDDI:    // An even more dubious dsniff inheritance
+            offset = 21; 
+            break;
+    #ifdef DLT_LOOP
+        case DLT_LOOP:    // Quite likely what it says on the tin
+    #endif
+        case DLT_NULL:    // etc ...
+            offset = 4;
+            break;
+        default:
+            // warnx("unsupported datalink type");
+            break;
+        }
+    return (offset);
+}
+
+
 void CDECL acktrack_parsepacket(acktrack_t* acktrack, const struct pcap_pkthdr* pkthdr, const u_char* packet, sequence_event_t* event_data)
 {    
     ip4_header* ih4;
@@ -337,14 +368,8 @@ void CDECL acktrack_parsepacket(acktrack_t* acktrack, const struct pcap_pkthdr* 
     // RFC8200 ALSO GAINED STD STATUS IN 2018 AS STD86
     // PERHAPS IT IS WORTH A COMPLETE READ
 
-#ifdef WIN32
+    skiplen = pcap_dloff(acktrack->curcap->handle);
 
-    if (pcap_datalink(acktrack->curcap->handle) == DLT_NULL)
-        skiplen = 4;
-#endif
-
-    if (pcap_datalink(acktrack->curcap->handle) == DLT_RAW)
-        skiplen = 0;
 
     logmsg("Skipping %d octet header", skiplen);
 

@@ -73,7 +73,7 @@ int main(int argc, char* argv[])
     }
 #endif
 
-    printf("\n\n");
+    // printf("\n\n");
 
     if (argc < 3) {
         fprintf(stderr, "usage %s hostname port\n", argv[0]);

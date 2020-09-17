@@ -32,11 +32,11 @@ for port in range (8000,8100):
     except OSError:
         pass
 s.listen(1)
-print("\nlistening")
+# print("\nlistening")
 p = subprocess.Popen([cdemo, host, str(port)])
-print("client running")
+# print("client running")
 conn, addr = s.accept()
-print("connection accepted")
+# print("connection accepted")
 
 while True:
     try:
