@@ -30,7 +30,11 @@ def test_get_port_v4():
     port = socket.ntohs(call_func('get_port(parseendpoint("127.0.0.1:80"))'))
     assert port == 80, "port number not preserved in calling get_port() on parseendpoint() result" 
 
-def test_get_ip_str():
+def test_get_port_v6():
+    port = socket.ntohs(call_func('get_port(parseendpoint("[::1]:80"))'))
+    assert port == 80, "port number not preserved in calling get_port() on parseendpoint() result" 
+
+def test_get_ip_str_v4():
     ip_str = call_func('get_ip_str(parseendpoint("127.0.0.1:80"))')
     assert ip_str == '127.0.0.1', "IPv4 address not preserved in calling get_ip_str() on parseendpoint() result" 
     

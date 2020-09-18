@@ -49,7 +49,7 @@ unittest:
 	@echo
 	@echo ++++++++++++++++ UNIT TESTS ++++++++++++++++
 	@echo
-	(cd tests; make test)
+	(cd tests; make unittests)
 
 citest: unittest functest
 
