@@ -30,8 +30,11 @@ install: libacktrack.so
 uninstall:
 	$(SUDO) rm -f $(DESTDIR)/lib/libacktrack.so
 
-citest: all
-	# needs to run as root, sudo not included here as gitlab-ci/docker doesn't have it.
+functest: all
+	# needs to run as root, sudo not included here as gitlab-ci/docker doesn't need or have it.
+	@echo
+	@echo +++++++++++++ FUNCTIONAL TESTS +++++++++++++
+	@echo
 	@echo
 	@LD_LIBRARY_PATH=$(CURDIR) cdemo/cdemo ipv4.google.com 80
 	@echo
@@ -42,7 +45,15 @@ citest: all
 	@LD_LIBRARY_PATH=$(CURDIR) cdemo/cdemo ipv6.google.com 80
 	@echo
 
-test: all
+unittest:
+	@echo
+	@echo ++++++++++++++++ UNIT TESTS ++++++++++++++++
+	@echo
+	(cd tests; make test)
+
+citest: unittest functest
+
+test: 
 	# run test as root for interactive test
 	$(SUDO) make citest
 
