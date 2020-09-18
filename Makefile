@@ -35,15 +35,7 @@ functest: all
 	@echo
 	@echo +++++++++++++ FUNCTIONAL TESTS +++++++++++++
 	@echo
-	@echo
-	@LD_LIBRARY_PATH=$(CURDIR) cdemo/cdemo ipv4.google.com 80
-	@echo
-	@LD_LIBRARY_PATH=$(CURDIR) cdemo/loopdemo.py 127.0.0.1
-	@echo
-	@LD_LIBRARY_PATH=$(CURDIR) cdemo/loopdemo.py ::1
-	@echo
-	@LD_LIBRARY_PATH=$(CURDIR) cdemo/cdemo ipv6.google.com 80
-	@echo
+	(cd tests; LD_LIBRARY_PATH=$(CURDIR) make functests)
 
 unittest:
 	@echo

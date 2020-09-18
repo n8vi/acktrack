@@ -13,5 +13,15 @@ acktrack.o: ../acktrack.cpp
 unittests: fixture
 	pytest-3 -p no:logging -v
 
+functests:
+	@echo
+	@../cdemo/cdemo ipv4.google.com 80
+	@echo
+	@./loopdemo.py
+	@echo
+	@../cdemo/cdemo ipv6.google.com 80
+	@echo
+
+
 clean:
 	sudo rm -fr *.o fixture __pycache__
