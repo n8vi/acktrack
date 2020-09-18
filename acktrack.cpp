@@ -279,6 +279,7 @@ int pcap_dloff(pcap_t *pd)
     switch (pcap_datalink(pd)) {
         case DLT_RAW:     // Teredo, for one example.  
             offset = 0;      // No need for "ethertype" or hardware addresses
+	    break;
         case DLT_EN10MB:  // 802.3 10bT, 802.3z 100bTX, 802.3ab 1000bT, etc
             offset = 14;     // 6 octet source and dest mac plus 2 octet ethertype
             break;
@@ -369,7 +370,6 @@ void CDECL acktrack_parsepacket(acktrack_t* acktrack, const struct pcap_pkthdr* 
     // PERHAPS IT IS WORTH A COMPLETE READ
 
     skiplen = pcap_dloff(acktrack->curcap->handle);
-
 
     logmsg("Skipping %d octet header", skiplen);
 
