@@ -22,7 +22,7 @@ lintest:
         - sh /setup.sh
         - sysctl -w net.ipv6.conf.eth0.disable_ipv6=1
         - route -A inet6
-        - make citest
+        - make test
 
 winbuild:
     stage: build
