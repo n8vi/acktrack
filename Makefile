@@ -1,7 +1,7 @@
 CFLAGS=-ggdb
 # CFLAGS=-ggdb -Wall -Wextra -Wformat-nonliteral -Wcast-align -Wpointer-arith -Wbad-function-cast -Wmissing-prototypes -Wstrict-prototypes -Wmissing-declarations -Winline -Wundef -Wnested-externs -Wcast-qual -Wshadow -Wwrite-strings -Wno-unused-parameter -Wfloat-equal -pedantic -ansi
 DESTDIR=/usr/local
-SUDO?=sudo
+SUDO=$(shell which sudo)
 SRCDIR=$(shell pwd)
 PROJECT=$(notdir $(SRCDIR))
 PROJDESC="A cross-platform library for keeping track of TCP ACKs in response to data sent on a socket."
@@ -30,24 +30,8 @@ install: libacktrack.so
 uninstall:
 	$(SUDO) rm -f $(DESTDIR)/lib/libacktrack.so
 
-functest: all
-	# needs to run as root, sudo not included here as gitlab-ci/docker doesn't need or have it.
-	@echo
-	@echo +++++++++++++ FUNCTIONAL TESTS +++++++++++++
-	@echo
-	(cd tests; LD_LIBRARY_PATH=$(CURDIR) make functests)
-
-unittest:
-	@echo
-	@echo ++++++++++++++++ UNIT TESTS ++++++++++++++++
-	@echo
-	(cd tests; make unittests)
-
-citest: unittest functest
-
-test: 
-	# run test as root for interactive test
-	$(SUDO) make citest
+test:
+	(cd tests; make test)
 
 deb: libacktrack.so
 	mkdir -p $(PROJECT)/DEBIAN
