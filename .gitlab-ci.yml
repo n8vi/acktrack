@@ -41,6 +41,25 @@ winbuild:
         paths:
             - Debug/
 
+wintest:
+    stage: test
+    tags:
+        - windows
+    before_script:
+        - choco install -y python3
+        - C:\Python38\python.exe -m pip install -U pip
+        - C:\Python38\python.exe -m pip install mechanize
+        - C:\Python38\python.exe runstuff.py
+        - C:\npcap.exe /disable_restore_point=yes /winpcap_mode=yes /loopback_support=no /S
+
+    script:
+        - echo PERFORMING IPv4 TEST
+        - Debug\cdemo "ipv4.google.com" "80"
+        - echo PERFORMING IPv6 TEST
+        - Debug\cdemo "ipv6.google.com" "80"
+        - echo TESTING DONE
+
+
 ## wintest:
 ##     stage: test
 ##     tags:
