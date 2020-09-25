@@ -5,3 +5,6 @@ Debug
 cdemo/Debug
 cdemo/cdemo
 libacktrack.so
+tests/__pycache__/
+tests/fixture
+tests/.cache

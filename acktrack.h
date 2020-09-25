@@ -78,29 +78,39 @@ typedef struct acktrack_cap_t {
 } acktrack_cap_t;
 
 /* The following struct may be subject to change */
+/*
+TODO: Change laddr and raddr to struct sockaddr.  This structure can hold IPv4 or IPv6 addresses
+which can identify themselves as such.  It also contains a port number which can subsume our
+"lport" and "rport" fields.
+*/
 typedef struct acktrack_t {
-    struct in_addr laddr;        /* local IP address  */  /* this is a problem for ipv6, obv */
-    struct in_addr raddr;        /* remote IP address */  /* this is a problem for ipv6, obv */
-    u_short lport;               /* local TCP port    */
-    u_short rport;               /* remote TCP port   */
-    u_int lseqorig;                /* Local initial sequence number SEE ABOVE */
-    u_int rseqorig;                /* remote initial sequence number SEE ABOVE */
+    struct sockaddr_storage local;
+    struct sockaddr_storage remote;
+
+    // struct in_addr laddr;        // local IP address   this is a problem for ipv6, obv 
+    // u_short lport;               // local TCP port    
+
+    // struct in_addr raddr;        // remote IP address  this is a problem for ipv6, obv 
+    // u_short rport;               // remote TCP port   
+
+    u_int lseqorig;              /* Local initial sequence number SEE ABOVE */
+    u_int rseqorig;              /* remote initial sequence number SEE ABOVE */
     u_int gotorigpkt;            /* nonzero if we have captured more than zero packets */
     struct timeval origtime;     /* time the original packet arrived */
     struct timeval lastacktime;  /* time the last ACK arrived from the remote */
     struct timeval lastsenttime; /* time we sent the last SEQ to the remote */
-    u_char gotrfin;                 /* nonzero if we've received a FIN from the remote */
-    u_char gotlfin;                 /* nonzero if we've sent a FIN */
-    u_char gotrst;                  /* nonzero if an RST has been seen from either side */
-    u_int lastrseq;                /* the last sequence number from the remote */
-    u_int lastlseq;                /* our last sequence number */
-    u_int lastrack;                /* the last ack we sent to the remote */
-    u_int lastlack;                /* the last ack we got */
-    u_int lfinseq;                 /* the sequence number of our local FIN packet if gotlfin */
-    u_int rfinseq;                 /* the sequence number of the FIN from the remote if gotrfin */
-    acktrack_cap_t *caps;               /* an array of pcap handles of all nterfaces with ipv4 on them */
-    u_char lastpktislocal;          /* nonzero if last packet seen was sent by us */
-    acktrack_cap_t *curcap;            /* current pcap_t handle used by acktrack_next() */
+    u_char gotrfin;              /* nonzero if we've received a FIN from the remote */
+    u_char gotlfin;              /* nonzero if we've sent a FIN */
+    u_char gotrst;               /* nonzero if an RST has been seen from either side */
+    u_int lastrseq;              /* the last sequence number from the remote */
+    u_int lastlseq;              /* our last sequence number */
+    u_int lastrack;              /* the last ack we sent to the remote */
+    u_int lastlack;              /* the last ack we got */
+    u_int lfinseq;               /* the sequence number of our local FIN packet if gotlfin */
+    u_int rfinseq;               /* the sequence number of the FIN from the remote if gotrfin */
+    acktrack_cap_t *caps;        /* an array of pcap handles of all interfaces with ipv4 on them */
+    u_char lastpktislocal;       /* nonzero if last packet seen was sent by us */
+    acktrack_cap_t *curcap;      /* current pcap_t handle used by acktrack_next() */
     void *cb;
 } acktrack_t;
 

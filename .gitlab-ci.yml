@@ -7,7 +7,7 @@
 linbuild:
     stage: build
     script:
-        - apt-get update -qq && apt-get install -y -qq libpcap-dev
+        - apt-get update -qq && apt-get install -y -qq libpcap-dev 
         - make
     artifacts:
         paths:
@@ -15,11 +15,14 @@ linbuild:
             - cdemo/cdemo
 
 lintest:
+    image: n8vi/ubuntu-ipv6
     stage: test
     needs: ["linbuild"]
     script:
-        - apt-get update -qq && apt-get install -y -qq libpcap-dev
-        - make citest
+        - sh /setup.sh
+        - sysctl -w net.ipv6.conf.eth0.disable_ipv6=1
+        - route -A inet6
+        - make test
 
 winbuild:
     stage: build
