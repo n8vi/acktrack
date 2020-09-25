@@ -17,7 +17,7 @@ else:
 try:
     url = os.environ['URL']
     username = os.environ['USERNAME']
-    password = os.environ['PASSWORD']
+    password = os.environ['PASSWORD'][:-1]
 except KeyError:
     print("Environment not configured for testing")
     sys.exit(1)
