@@ -48,12 +48,19 @@ class DebugSession():
 
         return ret
 
+def test_relseq_rseq():
+    d = DebugSession('fixture')
+    a = d.call_func('acktrack_alloc()');
+    d.call_func(f"set_rseqorig({a}, 1000)")
+    b = d.call_func(f'relseq({a}, 1024, 0)')
+    assert b == '24', "remote relative sequence number calculation incorrect"
+
 def test_relseq_lseq():
     d = DebugSession('fixture')
     a = d.call_func('acktrack_alloc()');
     d.call_func(f"set_lseqorig({a}, 1000)")
     b = d.call_func(f'relseq({a}, 1024, 1)')
-    assert b == '24', "relative sequence number calculation incorrect"
+    assert b == '24', "local relative sequence number calculation incorrect"
 
 def test_get_port_v4():
     d = DebugSession('fixture')
