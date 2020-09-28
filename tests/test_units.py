@@ -62,25 +62,47 @@ def test_relseq_lseq():
     b = d.call_func(f'relseq({a}, 1024, 1)')
     assert b == '24', "local relative sequence number calculation incorrect"
 
-def test_get_port_v4():
+def test_get_port():
     d = DebugSession('fixture')
-    port = socket.ntohs(int(d.call_func('get_port(parseendpoint("127.0.0.1:80"))')))
-    assert port == 80, "port number not preserved in calling get_port() on parseendpoint() result" 
+    sa = d.call_func('parseendpoint("127.0.0.1:80")')
+    port = socket.ntohs(int(d.call_func(f'get_port({sa})')))
+    assert port == 80
+    sa = d.call_func('parseendpoint("0.0.0.0:0")')
+    port = socket.ntohs(int(d.call_func(f'get_port({sa})')))
+    assert port == 0
+    sa = d.call_func('parseendpoint("255.255.255.255:65535")')
+    port = socket.ntohs(int(d.call_func(f'get_port({sa})')))
+    assert port == 65535
+    sa = d.call_func('parseendpoint("[::1]:80")')
+    port = socket.ntohs(int(d.call_func(f'get_port({sa})')))
+    assert port == 80
+    sa = d.call_func('parseendpoint("[::]:0")')
+    port = socket.ntohs(int(d.call_func(f'get_port({sa})')))
+    assert port == 0
+    sa = d.call_func('parseendpoint("[ffff:ffff:ffff:ffff:ffff:ffff:ffff:ffff]:65535")')
+    port = socket.ntohs(int(d.call_func(f'get_port({sa})')))
+    assert port == 65535
 
-def test_get_port_v6():
+def test_get_ip_str():
     d = DebugSession('fixture')
-    port = socket.ntohs(int(d.call_func('get_port(parseendpoint("[::1]:80"))')))
-    assert port == 80, "port number not preserved in calling get_port() on parseendpoint() result" 
-
-def test_get_ip_str_v4():
-    d = DebugSession('fixture')
-    ip_str = d.call_func('get_ip_str(parseendpoint("127.0.0.1:80"))')
-    assert ip_str == '"127.0.0.1"', "IPv4 address not preserved in calling get_ip_str() on parseendpoint() result" 
-    
-def test_get_ip_str_v6():
-    d = DebugSession('fixture')
-    ip_str = d.call_func('get_ip_str(parseendpoint("[::1]:80"))')
-    assert ip_str == '"::1"', "IPv6 address not preserved in calling get_ip_str() on parseendpoint() result" 
+    sa = d.call_func('parseendpoint("127.0.0.1:80")')
+    ipstr = d.call_func(f'get_ip_str({sa})')
+    assert ipstr == '"127.0.0.1"'
+    sa = d.call_func('parseendpoint("0.0.0.0:0")')
+    ipstr = d.call_func(f'get_ip_str({sa})')
+    assert ipstr == '"0.0.0.0"'
+    sa = d.call_func('parseendpoint("255.255.255.255:65535")')
+    ipstr = d.call_func(f'get_ip_str({sa})')
+    assert ipstr == '"255.255.255.255"'
+    sa = d.call_func('parseendpoint("[::1]:80")')
+    ipstr = d.call_func(f'get_ip_str({sa})')
+    assert ipstr == '"::1"'
+    sa = d.call_func('parseendpoint("[::]:0")')
+    ipstr = d.call_func(f'get_ip_str({sa})')
+    assert ipstr == '"::"'
+    sa = d.call_func('parseendpoint("[ffff:ffff:ffff:ffff:ffff:ffff:ffff:ffff]:65535")')
+    ipstr = d.call_func(f'get_ip_str({sa})')
+    assert ipstr == '"ffff:ffff:ffff:ffff:ffff:ffff:ffff:ffff"'
 
 def test_get_family():
     d = DebugSession('fixture')
@@ -99,7 +121,7 @@ def test_get_family():
     sa = d.call_func('parseendpoint("[::]:0")')
     fam = d.call_func(f'get_family({sa})')
     assert fam == '"ipv6"'
-    sa = d.call_func('parseendpoint("[ffff:ffff:ffff:ffff:ffff:ffff:ffff:ffff]:0")')
+    sa = d.call_func('parseendpoint("[ffff:ffff:ffff:ffff:ffff:ffff:ffff:ffff]:65535")')
     fam = d.call_func(f'get_family({sa})')
     assert fam == '"ipv6"'
 
