@@ -1,4 +1,5 @@
 #include "../acktrack.h"
+#include <sys/socket.h>
 
 acktrack_t *acktrack_alloc(void)
 {
@@ -24,6 +25,18 @@ acktrack_t *set_lseqorig(acktrack_t* acktrack, u_int new_lseqorig)
 acktrack_t *set_rseqorig(acktrack_t* acktrack, u_int new_rseqorig)
 {
     acktrack->rseqorig = new_rseqorig;
+    return acktrack;
+}
+
+acktrack_t *set_local(acktrack_t* acktrack, struct sockaddr *sa)
+{
+    memcpy(&acktrack->local, sa, sizeof(acktrack->local));
+    return acktrack;
+}
+
+acktrack_t *set_remote(acktrack_t* acktrack, struct sockaddr *sa)
+{
+    memcpy(&acktrack->remote, sa, sizeof(acktrack->remote));
     return acktrack;
 }
 

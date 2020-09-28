@@ -638,6 +638,26 @@ char* CDECL acktrack_error(void)
 
 }
 
+char *get_filter(acktrack_t *acktrack)
+{
+    static char filter[321] = "";
+    char lipstr[46];
+    char ripstr[46];
+    u_short lport;
+    u_short rport;
+
+    strcpy(lipstr, get_ip_str((const struct sockaddr *)&(acktrack->local)));
+    strcpy(ripstr, get_ip_str((const struct sockaddr *)&(acktrack->remote)));
+    lport = get_port((const struct sockaddr *)&(acktrack->local));
+    rport = get_port((const struct sockaddr *)&(acktrack->remote));
+
+    sprintf((char*)filter, "tcp and ((src host %s and src port %d and dst host %s and dst port %d) or (src host %s and src port %d and dst host %s and dst port %d))",
+        lipstr, ntohs(lport), ripstr, ntohs(rport),
+        ripstr, ntohs(rport), lipstr, ntohs(lport));
+
+    return filter;        
+}
+
 int acktrack_opencap(acktrack_t *acktrack)
 // Why not check the routing table and pick the interface based on that you ask?  INBOUND packets are not
 // bound to the rules of OUR routing table, they can come from literally anywhere.  Also, that sounds like
@@ -645,11 +665,7 @@ int acktrack_opencap(acktrack_t *acktrack)
 
 // Why not open "any" interface?  Because code may run on Windows, which doesn't have one.
 {
-    char lipstr[46];
-    char ripstr[46];
-    u_short lport;
-    u_short rport;
-    const char filter[321] = "";
+    char *filter;
     pcap_if_t *alldevs;
     char errbuf[PCAP_ERRBUF_SIZE];
     pcap_if_t *d;
@@ -663,14 +679,7 @@ int acktrack_opencap(acktrack_t *acktrack)
     int i=0;
     struct bpf_program fp;
 
-    strcpy(lipstr, get_ip_str((const struct sockaddr *)&(acktrack->local)));
-    strcpy(ripstr, get_ip_str((const struct sockaddr *)&(acktrack->remote)));
-    lport = get_port((const struct sockaddr *)&(acktrack->local));
-    rport = get_port((const struct sockaddr *)&(acktrack->remote));
-
-    sprintf((char*)filter, "tcp and ((src host %s and src port %d and dst host %s and dst port %d) or (src host %s and src port %d and dst host %s and dst port %d))",
-        lipstr, ntohs(lport), ripstr, ntohs(rport),
-        ripstr, ntohs(rport), lipstr, ntohs(lport));
+    filter = get_filter(acktrack);
         
     logmsg("filter: %s", filter);
 

@@ -125,3 +125,24 @@ def test_get_family():
     fam = d.call_func(f'get_family({sa})')
     assert fam == '"ipv6"'
 
+def get_endpointstring(ip, port):
+    if ':' in ip:
+        return f"[{ip}]:{port}"
+    else:
+        return f"{ip}:{port}"
+
+def check_filter(d, lip, lport, rip, rport):
+    a = d.call_func('acktrack_alloc()')
+    leps = get_endpointstring(lip, lport)
+    lsa = d.call_func(f'parseendpoint("{leps}")')
+    d.call_func(f'set_local({a}, {lsa})');
+    reps = get_endpointstring(rip, rport)
+    rsa = d.call_func(f'parseendpoint("{reps}")')
+    d.call_func(f'set_remote({a}, {rsa})');
+    f = d.call_func(f'get_filter({a})')
+    assert f == f'"tcp and ((src host {lip} and src port {lport} and dst host {rip} and dst port {rport}) or (src host {rip} and src port {rport} and dst host {lip} and dst port {lport}))"'
+
+def test_get_filter():
+    d = DebugSession('fixture')
+    check_filter(d, "10.10.10.10", "12345", "200.200.200.200", "200")
+    check_filter(d, "2002::ffff", "12345", "2600::1234", "200")
