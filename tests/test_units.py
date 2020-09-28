@@ -43,7 +43,7 @@ class DebugSession():
         if '"' in ret:
             return '"'+ret.split('"')[1]+'"'
         else:
-            return ret
+            return ret.split(' ')[0]
 
 
         return ret
@@ -81,4 +81,25 @@ def test_get_ip_str_v6():
     d = DebugSession('fixture')
     ip_str = d.call_func('get_ip_str(parseendpoint("[::1]:80"))')
     assert ip_str == '"::1"', "IPv6 address not preserved in calling get_ip_str() on parseendpoint() result" 
+
+def test_get_family():
+    d = DebugSession('fixture')
+    sa = d.call_func('parseendpoint("127.0.0.1:80")')
+    fam = d.call_func(f'get_family({sa})')
+    assert fam == '"ipv4"'
+    sa = d.call_func('parseendpoint("0.0.0.0:0")')
+    fam = d.call_func(f'get_family({sa})')
+    assert fam == '"ipv4"'
+    sa = d.call_func('parseendpoint("255.255.255.255:65535")')
+    fam = d.call_func(f'get_family({sa})')
+    assert fam == '"ipv4"'
+    sa = d.call_func('parseendpoint("[::1]:80")')
+    fam = d.call_func(f'get_family({sa})')
+    assert fam == '"ipv6"'
+    sa = d.call_func('parseendpoint("[::]:0")')
+    fam = d.call_func(f'get_family({sa})')
+    assert fam == '"ipv6"'
+    sa = d.call_func('parseendpoint("[ffff:ffff:ffff:ffff:ffff:ffff:ffff:ffff]:0")')
+    fam = d.call_func(f'get_family({sa})')
+    assert fam == '"ipv6"'
 
