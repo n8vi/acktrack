@@ -7,10 +7,16 @@ def calcchk(pkt):
     if len(pkt) % 2 == 1:
         pkt += [0]
     wpkt = [pkt[i]<<8|pkt[i+1] for i,x in enumerate(pkt) if not i%2]
-    wpkt = [0xffff ^ x for x in wpkt]
-    chk = sum(wpkt) & 0xffff
-    chk = 0xffff ^ chk
-    print("checksum %x"%chk)
+    chk = sum(wpkt)
+    print(1,"%x"%chk)
+    chk = (chk & 0xffff) + (chk>>16)
+    chk ^= 0xffff
+    print(2,"%x"%chk)
+
+    # wpkt = [0xffff ^ x for x in wpkt]
+    # chk = sum(wpkt) & 0xffff
+    # chk = 0xffff ^ chk
+    # print("checksum %x"%chk)
     return chk
 
 
