@@ -4,6 +4,7 @@ from pygdbmi.gdbcontroller import GdbController
 from pprint import pprint
 import code
 import socket
+import re
 # import pytest
 
 class DebugSession():
@@ -48,19 +49,6 @@ class DebugSession():
 
         return ret
 
-def test_relseq_rseq():
-    d = DebugSession('fixture')
-    a = d.call_func('acktrack_alloc()');
-    d.call_func(f"set_rseqorig({a}, 1000)")
-    b = d.call_func(f'relseq({a}, 1024, 0)')
-    assert b == '24', "remote relative sequence number calculation incorrect"
-
-def test_relseq_lseq():
-    d = DebugSession('fixture')
-    a = d.call_func('acktrack_alloc()');
-    d.call_func(f"set_lseqorig({a}, 1000)")
-    b = d.call_func(f'relseq({a}, 1024, 1)')
-    assert b == '24', "local relative sequence number calculation incorrect"
 
 def test_get_port():
     d = DebugSession('fixture')
@@ -146,3 +134,55 @@ def test_get_filter():
     d = DebugSession('fixture')
     check_filter(d, "10.10.10.10", "12345", "200.200.200.200", "200")
     check_filter(d, "2002::ffff", "12345", "2600::1234", "200")
+
+def test_relseq_rseq():
+    d = DebugSession('fixture')
+    a = d.call_func('acktrack_alloc()');
+    d.call_func(f"set_rseqorig({a}, 1000)")
+    b = d.call_func(f'relseq({a}, 1024, 0)')
+    assert b == '24', "remote relative sequence number calculation incorrect"
+
+def test_relseq_lseq():
+    d = DebugSession('fixture')
+    a = d.call_func('acktrack_alloc()');
+    d.call_func(f"set_lseqorig({a}, 1000)")
+    b = d.call_func(f'relseq({a}, 1024, 1)')
+    assert b == '24', "local relative sequence number calculation incorrect"
+
+def test_acktrack_t():
+    d = DebugSession('fixture')
+    a = d.call_func('acktrack_alloc()');
+    d.call_func(f"set_lastrseq({a}, 1000)")
+    d.call_func(f"set_lastlseq({a}, 2000)")
+    d.call_func(f"set_lastrack({a}, 3000)")
+    d.call_func(f"set_lastlack({a}, 4000)")
+    b = d.call_func(f'acktrack_lastrseq({a})')
+    assert b == '1000', "lastrseq() failed"
+    b = d.call_func(f'acktrack_lastlseq({a})')
+    assert b == '2000', "lastlseq() failed"
+    b = d.call_func(f'acktrack_lastrack({a})')
+    assert b == '3000', "lastrack() failed"
+    b = d.call_func(f'acktrack_lastlack({a})')
+    assert b == '4000', "lastlack() failed"
+    d.call_func(f"set_lastrseq({a}, 4000)")
+    d.call_func(f"set_lastlseq({a}, 3000)")
+    d.call_func(f"set_lastrack({a}, 2000)")
+    d.call_func(f"set_lastlack({a}, 1000)")
+    b = d.call_func(f'acktrack_lastrseq({a})')
+    assert b == '4000', "lastrseq() failed"
+    b = d.call_func(f'acktrack_lastlseq({a})')
+    assert b == '3000', "lastlseq() failed"
+    b = d.call_func(f'acktrack_lastrack({a})')
+    assert b == '2000', "lastrack() failed"
+    b = d.call_func(f'acktrack_lastlack({a})')
+    assert b == '1000', "lastlack() failed"
+
+def test_socket_filter():
+    d = DebugSession('fixture')
+    s = d.call_func('sck_conn("8.8.8.8:53")')
+    assert s != '-1', 'failed to create socket (invalid test result)'
+    a = d.call_func(f'acktrack_create({s})')
+    assert a != '0x0', 'failed to create acktrack_t object'
+    f = d.call_func(f"get_filter({a})")
+    assert re.search(r'^"tcp and \(\(src host ([0-9.]+) and src port ([0-9]+) and dst host 8.8.8.8 and dst port 53\) or \(src host 8.8.8.8 and src port 53 and dst host \1 and dst port \2\)\)"$', f), 'failed to generate accurate filter string'
+
