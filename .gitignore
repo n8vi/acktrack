@@ -7,4 +7,5 @@ cdemo/cdemo
 libacktrack.so
 tests/__pycache__/
 tests/fixture
+tests/unittest
 tests/.cache
