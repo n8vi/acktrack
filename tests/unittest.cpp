@@ -3,7 +3,7 @@
 #include <CUnit/Basic.h>
 #include "../acktrack.h"
 
-struct sockaddr *parseendpoint(char* endpoint);
+struct sockaddr *parseendpoint(const char* endpoint);
 u_short get_port(const struct sockaddr *sa);
 char *get_ip_str(const struct sockaddr *sa);
 char *get_family(const struct sockaddr *sa);
@@ -181,24 +181,31 @@ def test_socket_filter():
 
 	// 2001:4860:4860::8888
 
-/*
-def test_socket_filter(void)
+void test_socket_filter(void)
 {
 	struct sockaddr *rsa;
-	struct sockaddr_storage lsa;
+	struct sockaddr_storage lsa_storage;
+	struct sockaddr *lsa = (struct sockaddr *)&lsa_storage;;
 	char filter[321];
+	int s, r;
+	socklen_t len;
+	acktrack_t *a;
 
 	rsa = parseendpoint("8.8.8.8:53");
 	s = socket(AF_INET, SOCK_STREAM, 0);
 	connect(s, rsa, sizeof(struct sockaddr_in));
-	len = sizeof(lsa);
-	r = getsockname(sck, (struct sockaddr*)&lsa, &len);
+	len = sizeof(lsa_storage);
+	r = getsockname(s, lsa, &len);
 	CU_ASSERT(r != -1);
-	sprintf(filter, 
 
+	sprintf(filter, "tcp and ((src host %s and src port %d and dst host 8.8.8.8 and dst port 53)", get_ip_str(lsa), ntohs(get_port(lsa)));
+	sprintf(filter, "%s or (src host 8.8.8.8 and src port 53 and dst host %s and dst port %d))", filter, get_ip_str(lsa), ntohs(get_port(lsa)));
+
+	a = acktrack_create(s);
+
+	CU_ASSERT(!strcmp(get_filter(a), filter));
         
 }
-*/
 
 int main(void)
 {
@@ -222,7 +229,8 @@ int main(void)
        (NULL == CU_add_test(pSuite, "test get_filter()", test_get_filter)) ||
        (NULL == CU_add_test(pSuite, "test remote relseq()", test_relseq_rseq)) ||
        (NULL == CU_add_test(pSuite, "test local relseq()", test_relseq_lseq)) ||
-       (NULL == CU_add_test(pSuite, "test lseq, rseq, lack, and rack", test_acktrack_t))
+       (NULL == CU_add_test(pSuite, "test lseq, rseq, lack, and rack", test_acktrack_t))||
+       (NULL == CU_add_test(pSuite, "test filter generated from socket", test_socket_filter))
       )
    {
       CU_cleanup_registry();

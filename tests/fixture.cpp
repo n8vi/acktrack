@@ -1,7 +1,7 @@
 #include "../acktrack.h"
 #include <sys/socket.h>
 
-struct sockaddr *parseendpoint(char* endpoint);
+struct sockaddr *parseendpoint(const char* endpoint);
 
 int sck_conn(char *endpoint)
 {

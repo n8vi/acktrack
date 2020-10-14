@@ -133,7 +133,7 @@ char *get_family(const struct sockaddr *sa)
         }
 }
 
-struct sockaddr *parseendpoint(char* endpoint)
+struct sockaddr *parseendpoint(const char* endpoint)
 {
     static struct sockaddr_storage sas;
     struct sockaddr_in *sa4 = (struct sockaddr_in*)&sas;
