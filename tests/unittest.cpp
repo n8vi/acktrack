@@ -56,9 +56,9 @@ char *get_endpointstring(const char *ip, const char *port)
 	static char ret[55];
 
 	if(strchr(ip, ':') != NULL) 
-		sprintf(ret, "[%s]:%s", ip, port);
+		snprintf(ret, 54, "[%s]:%s", ip, port);
 	else
-		sprintf(ret, "%s:%s", ip, port);
+		snprintf(ret, 54, "%s:%s", ip, port);
 	return ret;
 
 }
@@ -73,7 +73,7 @@ void check_get_filter(const char *lip, const char *lport, const char *rip, const
 	memcpy((void*)&(a->local), (void*)parseendpoint(get_endpointstring(lip, lport)), sizeof(a->local));
 	memcpy((void*)&(a->remote), (void*)parseendpoint(get_endpointstring(rip, rport)), sizeof(a->remote));
 	f = get_filter(a);
-	sprintf(filter, "tcp and ((src host %s and src port %s and dst host %s and dst port %s) or (src host %s and src port %s and dst host %s and dst port %s))",
+	snprintf(filter, 320, "tcp and ((src host %s and src port %s and dst host %s and dst port %s) or (src host %s and src port %s and dst host %s and dst port %s))",
 			        lip, lport, rip, rport,
 				rip, rport, lip, lport);
 	CU_ASSERT(!strcmp(f, filter));
@@ -167,44 +167,56 @@ void test_acktrack_t(void)
     CU_ASSERT(b == 1000);
 }
 
-/*
-def test_socket_filter():
-    d = DebugSession('fixture')
-    s = d.call_func('sck_conn("8.8.8.8:53")')
-    assert s != '-1', 'failed to create socket (invalid test result)'
-    a = d.call_func(f'acktrack_create({s})')
-    assert a != '0x0', 'failed to create acktrack_t object'
-    f = d.call_func(f"get_filter({a})")
-    assert re.search(r'^"tcp and \(\(src host ([0-9.]+) and src port ([0-9]+) and dst host 8.8.8.8 and dst port 53\) or \(src host 8.8.8.8 and src port 53 and dst host \1 and dst port \2\)\)"$', f), 'failed to generate accurate filter string'
 
-*/
 
-	// 2001:4860:4860::8888
-
-void test_socket_filter(void)
+void check_socket_filter(const char *endpoint)
 {
 	struct sockaddr *rsa;
 	struct sockaddr_storage lsa_storage;
-	struct sockaddr *lsa = (struct sockaddr *)&lsa_storage;;
+	struct sockaddr *lsa = (struct sockaddr *)&lsa_storage;
+	char temp[179];
 	char filter[321];
+	char host[55];
+	char port[6];
 	int s, r;
 	socklen_t len;
 	acktrack_t *a;
 
-	rsa = parseendpoint("8.8.8.8:53");
-	s = socket(AF_INET, SOCK_STREAM, 0);
-	connect(s, rsa, sizeof(struct sockaddr_in));
+	rsa = parseendpoint(endpoint);
+	strcpy(host, get_ip_str(rsa));
+	sprintf(port, "%d", htons(get_port(rsa)));
+	s = socket(rsa->sa_family, SOCK_STREAM, 0);
+	r = -1;
+	switch(rsa->sa_family) {
+		case AF_INET:
+			r = connect(s, rsa, sizeof(struct sockaddr_in));
+			break;
+		case AF_INET6:
+			r = connect(s, rsa, sizeof(struct sockaddr_in6));
+			break;
+			}
+	CU_ASSERT(r != -1);
 	len = sizeof(lsa_storage);
 	r = getsockname(s, lsa, &len);
 	CU_ASSERT(r != -1);
-
-	sprintf(filter, "tcp and ((src host %s and src port %d and dst host 8.8.8.8 and dst port 53)", get_ip_str(lsa), ntohs(get_port(lsa)));
-	sprintf(filter, "%s or (src host 8.8.8.8 and src port 53 and dst host %s and dst port %d))", filter, get_ip_str(lsa), ntohs(get_port(lsa)));
+	snprintf(temp, 178, "tcp and ((src host %s and src port %d and dst host %s and dst port %s)", get_ip_str(lsa), ntohs(get_port(lsa)), host, port);
+	snprintf(filter, 320, "%.177s or (src host %s and src port %s and dst host %s and dst port %d))", temp, host, port, get_ip_str(lsa), ntohs(get_port(lsa)));
 
 	a = acktrack_create(s);
 
 	CU_ASSERT(!strcmp(get_filter(a), filter));
-        
+}
+
+
+void test_socket_filter(void)
+{
+	check_socket_filter("8.8.8.8:53");
+	check_socket_filter("[2001:4860:4860::8888]:53");
+}
+
+void test_logmsg(void)
+{
+	acktrack_writelog("hello world");
 }
 
 int main(void)
@@ -230,7 +242,8 @@ int main(void)
        (NULL == CU_add_test(pSuite, "test remote relseq()", test_relseq_rseq)) ||
        (NULL == CU_add_test(pSuite, "test local relseq()", test_relseq_lseq)) ||
        (NULL == CU_add_test(pSuite, "test lseq, rseq, lack, and rack", test_acktrack_t))||
-       (NULL == CU_add_test(pSuite, "test filter generated from socket", test_socket_filter))
+       (NULL == CU_add_test(pSuite, "test filter generated from socket", test_socket_filter)) ||
+       (NULL == CU_add_test(pSuite, "test logmsg", test_logmsg))
       )
    {
       CU_cleanup_registry();

@@ -212,7 +212,7 @@ int CDECL acktrack_openlog(const char* logfile)
         return 1;
 }
 
-void CDECL acktrack_writelog(char* msg)
+void CDECL acktrack_writelog(const char* msg)
 {
     logmsg("APP: %s", msg);
 }

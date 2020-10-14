@@ -14,7 +14,7 @@ unittest: unittest.o acktrack.o
 acktrack.o: ../acktrack.cpp
 	$(CC) -c ../acktrack.cpp $(LDLIBS)
 
-test: fixture
+test: unittest
 	(cd ../cdemo; make)
 	$(SUDO) pytest-3 -p no:logging -v
 	$(SUDO) ./unittest

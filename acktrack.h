@@ -123,7 +123,7 @@ extern "C" ACKTRACK_API acktrack_t * CDECL acktrack_create(int sck);
 extern "C" ACKTRACK_API void CDECL acktrack_dispatch(acktrack_t * acktrack, acktrack_cb_t cb);
 
 extern "C" ACKTRACK_API int  CDECL acktrack_openlog(const char* logfile);
-extern "C" ACKTRACK_API void CDECL acktrack_writelog(char* msg);
+extern "C" ACKTRACK_API void CDECL acktrack_writelog(const char* msg);
 extern "C" ACKTRACK_API void CDECL acktrack_closelog(void);
 extern "C" ACKTRACK_API char* CDECL acktrack_error(void);
 
