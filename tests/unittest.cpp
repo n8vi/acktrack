@@ -216,6 +216,28 @@ void test_socket_filter(void)
 
 void test_logmsg(void)
 {
+	FILE *fp;
+	char s[64];
+	char *l;
+	acktrack_writelog("hello world");
+	acktrack_openlog("test_logmsg.log");
+	acktrack_writelog("hello world");
+	acktrack_closelog();
+
+	fp = fopen("test_logmsg.log", "r");
+	CU_ASSERT_FATAL(fp != NULL);
+
+	fgets(s, 64, fp);
+	l = strchr(s, ' ')+1;
+	l = strchr(l, ' ')+1;
+	CU_ASSERT(!strcmp(l, "log file opened\n"));
+
+	fgets(s, 64, fp);
+	l = strchr(s, ' ')+1;
+	l = strchr(l, ' ')+1;
+	CU_ASSERT(!strcmp(l, "APP: hello world\n"));
+	
+	fclose(fp);
 	acktrack_writelog("hello world");
 }
 
@@ -235,15 +257,15 @@ int main(void)
 
    /* add the tests to the suite */
    if (
-       (NULL == CU_add_test(pSuite, "test get_port()", test_get_port)) ||
-       (NULL == CU_add_test(pSuite, "test get_ip_str()", test_get_ip_str)) ||
-       (NULL == CU_add_test(pSuite, "test get_family()", test_get_family)) ||
-       (NULL == CU_add_test(pSuite, "test get_filter()", test_get_filter)) ||
-       (NULL == CU_add_test(pSuite, "test remote relseq()", test_relseq_rseq)) ||
-       (NULL == CU_add_test(pSuite, "test local relseq()", test_relseq_lseq)) ||
-       (NULL == CU_add_test(pSuite, "test lseq, rseq, lack, and rack", test_acktrack_t))||
-       (NULL == CU_add_test(pSuite, "test filter generated from socket", test_socket_filter)) ||
-       (NULL == CU_add_test(pSuite, "test logmsg", test_logmsg))
+       (NULL == CU_add_test(pSuite, "get_port()", test_get_port)) ||
+       (NULL == CU_add_test(pSuite, "get_ip_str()", test_get_ip_str)) ||
+       (NULL == CU_add_test(pSuite, "get_family()", test_get_family)) ||
+       (NULL == CU_add_test(pSuite, "get_filter()", test_get_filter)) ||
+       (NULL == CU_add_test(pSuite, "remote relseq()", test_relseq_rseq)) ||
+       (NULL == CU_add_test(pSuite, "local relseq()", test_relseq_lseq)) ||
+       (NULL == CU_add_test(pSuite, "lseq, rseq, lack, and rack", test_acktrack_t))||
+       (NULL == CU_add_test(pSuite, "filter generated from socket", test_socket_filter)) ||
+       (NULL == CU_add_test(pSuite, "logmsg()", test_logmsg))
       )
    {
       CU_cleanup_registry();
