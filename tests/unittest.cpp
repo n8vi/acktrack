@@ -3,13 +3,44 @@
 #include <CUnit/Basic.h>
 #include "../acktrack.h"
 
+typedef struct ip4_header{
+    u_char  ver_ihl;        // Version (4 bits) + Internet header length (4 bits)
+    u_char  tos;            // Type of service 
+    u_short tlen;           // Total length 
+    u_short identification; // Identification
+    u_short flags_fo;       // Flags (3 bits) + Fragment offset (13 bits)
+    u_char  ttl;            // Time to live
+    u_char  proto;          // Protocol
+    u_short crc;            // Header checksum
+    struct in_addr saddr;   // Source address
+    struct in_addr daddr;   // Destination address
+    u_int   op_pad;         // Option + Padding
+}ip4_header;
+
+typedef struct ip6_header{
+    u_int ver_class_flowlabel; // Version (4 bits) + traffic class (8 bits) + flow label (20 bits)
+    u_short payload_len;        // Length of payload plus any extension headers
+    u_char next_header;         // Type of next header
+    u_char hop_limit;           // What it says on the tin
+    struct in6_addr saddr;      // Source address
+    struct in6_addr daddr;      // Destination address
+}ip6_header;
+
+typedef struct tcp_header{
+    u_short sport;
+    u_short dport;
+    u_int seq_number;
+    u_int ack_number;
+    u_int offset_reserved_flags_window;
+}tcp_header;
+
 struct sockaddr *parseendpoint(const char* endpoint);
 u_short get_port(const struct sockaddr *sa);
 char *get_ip_str(const struct sockaddr *sa);
 char *get_family(const struct sockaddr *sa);
 char *get_filter(acktrack_t *acktrack);
 u_int relseq(acktrack_t *acktrack, u_int absseq, int islseq);
-
+int pcap_dloff(pcap_t *pd);
 
 int init_suite1(void)
 {
@@ -241,6 +272,135 @@ void test_logmsg(void)
 	acktrack_writelog("hello world");
 }
 
+void test_isfinishing(void)
+{
+    acktrack_t *a;
+
+    a = (acktrack_t*)malloc(sizeof(acktrack_t));
+
+    a->gotlfin = 0;
+    a->gotrfin = 0;
+    a->gotrst = 0;
+
+    CU_ASSERT(!acktrack_isfinishing(a));
+    // local side closed
+    a->gotlfin = 1;
+    CU_ASSERT(acktrack_isfinishing(a));
+    a->gotlfin = 0;
+    CU_ASSERT(!acktrack_isfinishing(a));
+    // remote side closed
+    a->gotrfin = 1;
+    CU_ASSERT(acktrack_isfinishing(a));
+    a->gotrfin = 0;
+    CU_ASSERT(!acktrack_isfinishing(a));
+    // either side reset
+    a->gotrst = 1;
+    CU_ASSERT(acktrack_isfinishing(a));
+}
+
+void test_isfinished(void)
+{
+    acktrack_t *a;
+
+    a = (acktrack_t*)malloc(sizeof(acktrack_t));
+
+    a->gotlfin = 0;
+    a->gotrfin = 0;
+    a->gotrst = 0;
+    a->lastlack = a->lfinseq = a->lastrack = a->rfinseq = 0;
+
+    CU_ASSERT(!acktrack_isfinished(a));
+    a->gotrst = 1;
+    CU_ASSERT(acktrack_isfinished(a));
+    a->gotrst = 0;
+    CU_ASSERT(!acktrack_isfinished(a));
+    a->gotlfin = 1;
+    CU_ASSERT(!acktrack_isfinished(a));
+    a->gotlfin = 0;
+    a->gotrfin = 1;
+    CU_ASSERT(!acktrack_isfinished(a));
+    a->gotlfin = 1;
+    CU_ASSERT(!acktrack_isfinished(a));
+    a->lastlack = 1;
+    CU_ASSERT(!acktrack_isfinished(a));
+    a->lastlack = 0;
+    a->lastrack = 1;
+    CU_ASSERT(!acktrack_isfinished(a));
+    a->lastlack = 1;
+    CU_ASSERT(acktrack_isfinished(a));
+    a->lfinseq = 1;
+    CU_ASSERT(!acktrack_isfinished(a));
+    a->lfinseq = 0;
+    a->rfinseq = 1;
+    CU_ASSERT(!acktrack_isfinished(a));
+    a->lfinseq = 1;
+    CU_ASSERT(!acktrack_isfinished(a));
+}
+
+pcap_t *openloop(void)
+{
+    pcap_if_t *alldevs;
+    char errbuf[PCAP_ERRBUF_SIZE];
+    pcap_if_t *d;
+
+    if (pcap_findalldevs(&alldevs, errbuf) == -1)
+        return NULL;
+
+    for (d=alldevs; d != NULL; d = d->next) {
+        if (d->flags & PCAP_IF_LOOPBACK) {
+            return pcap_open_live(d->name, BUFSIZ, 0, -1,errbuf);
+            }
+        }
+
+    return NULL;
+}
+
+void test_dloff(void)
+{
+    acktrack_t *a;
+
+    a = (acktrack_t*)malloc(sizeof(acktrack_t));
+    a->curcap = (acktrack_cap_t*)malloc(sizeof(acktrack_cap_t));
+    a->curcap->handle = openloop();
+    CU_ASSERT_FATAL(a->curcap->handle != NULL);    
+    // printf("\n\n%d\n\n", pcap_dloff(a->curcap->handle));
+    CU_ASSERT(pcap_dloff(a->curcap->handle) == 4);    
+
+}
+
+void test_parsepacket(void)
+{
+    acktrack_t a;
+    struct pcap_pkthdr h;
+    u_char p[65590];
+    sequence_event_t e;
+    ip4_header *i;
+    tcp_header *t;
+    u_int ip_len;
+
+    a.curcap = (acktrack_cap_t*)malloc(sizeof(acktrack_cap_t));
+    a.curcap->handle = openloop();
+    CU_ASSERT_FATAL(a.curcap->handle != NULL);
+    memcpy((void*)&(a.remote), (void*)parseendpoint("2.2.2.2:2"), sizeof(a.remote));
+    memcpy((void*)&(a.local), (void*)parseendpoint("1.1.1.1:1"), sizeof(a.local));
+    a.gotorigpkt = 0;
+    
+    h.ts.tv_sec = 0;
+    h.ts.tv_usec = 0;
+
+    i = (ip4_header*)(p+pcap_dloff(a.curcap->handle));
+    i->ver_ihl = 0x45;
+    memcpy((void*)&(i->saddr), (void *)&(((struct sockaddr_in*)(&a.remote))->sin_addr), sizeof(struct sockaddr_in));
+    memcpy((void*)&(i->daddr), (void *)&(((struct sockaddr_in*)(&a.local))->sin_addr), sizeof(struct sockaddr_in));
+    ip_len = (i->ver_ihl & 0xf) * 4;
+    t = (tcp_header*)((u_char*)i + ip_len);
+    // i->tlen = xxxxxxx;
+    t->sport = ((struct sockaddr_in *)&(a.local))->sin_port;
+    // t->orfw = xxxxxxx; // set flags
+
+    
+}
+
 int main(void)
 {
   CU_pSuite pSuite = NULL;
@@ -265,7 +425,10 @@ int main(void)
        (NULL == CU_add_test(pSuite, "local relseq()", test_relseq_lseq)) ||
        (NULL == CU_add_test(pSuite, "lseq, rseq, lack, and rack", test_acktrack_t))||
        (NULL == CU_add_test(pSuite, "filter generated from socket", test_socket_filter)) ||
-       (NULL == CU_add_test(pSuite, "logmsg()", test_logmsg))
+       (NULL == CU_add_test(pSuite, "isfinishing()", test_isfinishing)) ||
+       (NULL == CU_add_test(pSuite, "isfinished()", test_isfinished)) ||
+       (NULL == CU_add_test(pSuite, "logmsg()", test_logmsg)) ||
+       (NULL == CU_add_test(pSuite, "pcap_parsepacket()", test_parsepacket))
       )
    {
       CU_cleanup_registry();
