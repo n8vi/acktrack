@@ -3,6 +3,13 @@
 #include <CUnit/Basic.h>
 #include "../acktrack.h"
 
+#define FINFLAG (1<<16)
+#define SYNFLAG (1<<17)
+#define RSTFLAG (1<<18)
+#define PSHFLAG (1<<19)
+#define ACKFLAG (1<<20)
+#define URGFLAG (1<<21)
+
 typedef struct ip4_header{
     u_char  ver_ihl;        // Version (4 bits) + Internet header length (4 bits)
     u_char  tos;            // Type of service 
@@ -41,6 +48,8 @@ char *get_family(const struct sockaddr *sa);
 char *get_filter(acktrack_t *acktrack);
 u_int relseq(acktrack_t *acktrack, u_int absseq, int islseq);
 int pcap_dloff(pcap_t *pd);
+void CDECL acktrack_parsepacket(acktrack_t* acktrack, const struct pcap_pkthdr* pkthdr, const u_char* packet, sequence_event_t* event_data);
+
 
 int init_suite1(void)
 {
@@ -377,7 +386,9 @@ void test_parsepacket(void)
     ip4_header *i;
     tcp_header *t;
     u_int ip_len;
+    u_int tcp_len;
 
+    // Set up acktrack object
     a.curcap = (acktrack_cap_t*)malloc(sizeof(acktrack_cap_t));
     a.curcap->handle = openloop();
     CU_ASSERT_FATAL(a.curcap->handle != NULL);
@@ -385,19 +396,45 @@ void test_parsepacket(void)
     memcpy((void*)&(a.local), (void*)parseendpoint("1.1.1.1:1"), sizeof(a.local));
     a.gotorigpkt = 0;
     
+    // set up pkthdr object
     h.ts.tv_sec = 0;
     h.ts.tv_usec = 0;
 
+    // set up packet data
     i = (ip4_header*)(p+pcap_dloff(a.curcap->handle));
     i->ver_ihl = 0x45;
     memcpy((void*)&(i->saddr), (void *)&(((struct sockaddr_in*)(&a.remote))->sin_addr), sizeof(struct sockaddr_in));
     memcpy((void*)&(i->daddr), (void *)&(((struct sockaddr_in*)(&a.local))->sin_addr), sizeof(struct sockaddr_in));
     ip_len = (i->ver_ihl & 0xf) * 4;
     t = (tcp_header*)((u_char*)i + ip_len);
-    // i->tlen = xxxxxxx;
     t->sport = ((struct sockaddr_in *)&(a.local))->sin_port;
-    // t->orfw = xxxxxxx; // set flags
+    t->dport = ((struct sockaddr_in *)&(a.remote))->sin_port;
+    t->offset_reserved_flags_window = htonl(SYNFLAG|ACKFLAG);
+    t->seq_number = ntohl(1001);
+    t->ack_number = ntohl(2001);
 
+    tcp_len = 5; // for now
+    t->offset_reserved_flags_window |= htonl((tcp_len/4)<<28);
+
+    i->tlen = ip_len+(tcp_len*4);
+
+    acktrack_parsepacket(&a, &h, p, &e);
+
+    CU_ASSERT(a.lseqorig == 1000)
+    CU_ASSERT(a.rseqorig == 2000)
+    CU_ASSERT(a.gotorigpkt == 1);
+    // CU_ASSERT(a.origtime == a.lastacktime);
+    // CU_ASSERT(a.origtime != 0);
+    CU_ASSERT(a.gotrfin == 0);
+    CU_ASSERT(a.gotlfin == 0);
+    CU_ASSERT(a.gotrst == 0);
+    CU_ASSERT(a.lastlack == 2001);
+    CU_ASSERT(a.lastrack == 0);
+    CU_ASSERT(a.lastrseq == 1001);
+    CU_ASSERT(a.lastlseq == 0);
+    CU_ASSERT(a.lfinseq ==0);
+    CU_ASSERT(a.rfinseq == 0);
+    CU_ASSERT(a.lastpktislocal == 0);
     
 }
 
