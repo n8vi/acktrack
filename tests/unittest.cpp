@@ -409,7 +409,7 @@ void test_parsepacket(void)
     t = (tcp_header*)((u_char*)i + ip_len);
     t->sport = ((struct sockaddr_in *)&(a.local))->sin_port;
     t->dport = ((struct sockaddr_in *)&(a.remote))->sin_port;
-    t->offset_reserved_flags_window = htonl(SYNFLAG|ACKFLAG);
+    t->offset_reserved_flags_window = htonl(ACKFLAG);
     t->seq_number = ntohl(1001);
     t->ack_number = ntohl(2001);
 
@@ -435,6 +435,17 @@ void test_parsepacket(void)
     CU_ASSERT(a.lfinseq ==0);
     CU_ASSERT(a.rfinseq == 0);
     CU_ASSERT(a.lastpktislocal == 0);
+
+    CU_ASSERT(e.is_local == 0);
+    CU_ASSERT(e.seqno == 1001);
+    CU_ASSERT(e.is_interesting == 1);
+    CU_ASSERT(e.is_error == 0);
+    CU_ASSERT(e.has_urg == 0);
+    CU_ASSERT(e.has_ack == 1);
+    CU_ASSERT(e.has_psh == 0);
+    CU_ASSERT(e.has_rst == 0);
+    CU_ASSERT(e.has_syn == 0);
+    CU_ASSERT(e.has_fin == 0);
     
 }
 
