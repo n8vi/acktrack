@@ -1,5 +1,6 @@
 #include <stdio.h>
 #include <string.h>
+#include <unistd.h>
 #include <CUnit/Basic.h>
 #include "../acktrack.h"
 
@@ -279,6 +280,8 @@ void test_logmsg(void)
 	
 	fclose(fp);
 	acktrack_writelog("hello world");
+
+        unlink("test_logmsg.log");
 }
 
 void test_isfinishing(void)
