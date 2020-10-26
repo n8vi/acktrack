@@ -48,7 +48,7 @@ char *get_family(const struct sockaddr *sa);
 char *get_filter(acktrack_t *acktrack);
 u_int relseq(acktrack_t *acktrack, u_int absseq, int islseq);
 int pcap_dloff(pcap_t *pd);
-void CDECL acktrack_parsepacket(acktrack_t* acktrack, const struct pcap_pkthdr* pkthdr, const u_char* packet, sequence_event_t* event_data);
+void acktrack_parsepacket(acktrack_t* acktrack, const struct pcap_pkthdr* pkthdr, const u_char* packet, sequence_event_t* event_data);
 
 
 int init_suite1(void)
@@ -377,7 +377,7 @@ void test_dloff(void)
 
 }
 
-void test_parsepacket(void)
+void test_parsepacket_v4(void)
 {
     acktrack_t a;
     struct pcap_pkthdr h;
@@ -482,6 +482,113 @@ void test_parsepacket(void)
     
 }
 
+void test_parsepacket_v6(void)
+{
+    acktrack_t a;
+    struct pcap_pkthdr h;
+    u_char p[65590];
+    sequence_event_t e;
+    ip6_header *i;
+    tcp_header *t;
+    u_int ip_len;
+    u_int tcp_len;
+
+    bzero(&a, sizeof(acktrack_t));
+
+    // Set up acktrack object
+    a.curcap = (acktrack_cap_t*)malloc(sizeof(acktrack_cap_t));
+    a.curcap->handle = openloop();
+    CU_ASSERT_FATAL(a.curcap->handle != NULL);
+    memcpy((void*)&(a.remote), (void*)parseendpoint("[2::2]:2"), sizeof(a.remote));
+    memcpy((void*)&(a.local), (void*)parseendpoint("[1::1]:1"), sizeof(a.local));
+    a.gotorigpkt = 0;
+    
+    // set up pkthdr object
+    h.ts.tv_sec = 100;
+    h.ts.tv_usec = 200;
+
+    // set up packet data
+    i = (ip6_header*)(p+pcap_dloff(a.curcap->handle));
+    i->ver_class_flowlabel = 0x60;
+    i->next_header = 6;
+    memcpy((void*)&(i->saddr), (void *)&(((struct sockaddr_in6*)(&a.remote))->sin6_addr), sizeof(struct sockaddr_in6));
+    memcpy((void*)&(i->daddr), (void *)&(((struct sockaddr_in6*)(&a.local))->sin6_addr), sizeof(struct sockaddr_in6));
+    t = (tcp_header*)((u_char*)i + sizeof(ip6_header)); // for now test without extension headers
+    t->sport = ((struct sockaddr_in *)&(a.local))->sin_port;
+    t->dport = ((struct sockaddr_in *)&(a.remote))->sin_port;
+    t->offset_reserved_flags_window = htonl(ACKFLAG);
+    t->seq_number = ntohl(1001);
+    t->ack_number = ntohl(2001);
+
+    tcp_len = 5; // for now
+    t->offset_reserved_flags_window |= htonl((tcp_len/4)<<28);
+
+    i->payload_len = sizeof(tcp_header);
+
+    acktrack_parsepacket(&a, &h, p, &e);
+
+    CU_ASSERT(a.lseqorig == 1000);
+    CU_ASSERT(a.rseqorig == 2000);
+    CU_ASSERT(a.gotorigpkt == 1);
+
+    CU_ASSERT(a.origtime.tv_sec == a.lastacktime.tv_sec);
+    CU_ASSERT(a.lastacktime.tv_sec == 100);
+
+    CU_ASSERT(a.origtime.tv_usec == a.lastacktime.tv_usec);
+    CU_ASSERT(a.lastacktime.tv_usec == 200);
+
+    CU_ASSERT(a.gotrfin == 0);
+    CU_ASSERT(a.gotlfin == 0);
+    CU_ASSERT(a.gotrst == 0);
+
+    CU_ASSERT(acktrack_lastlack(&a) == a.lastlack);
+    CU_ASSERT(a.lastlack == 2001);
+
+    CU_ASSERT(acktrack_lastrack(&a) == a.lastrack);
+    CU_ASSERT(a.lastrack == 0);
+
+    CU_ASSERT(acktrack_lastrseq(&a) == a.lastrseq);
+    CU_ASSERT(a.lastrseq == 1001);
+
+    CU_ASSERT(acktrack_lastlseq(&a) == a.lastlseq);
+    CU_ASSERT(a.lastlseq == 0);
+
+    CU_ASSERT(a.lfinseq ==0);
+    CU_ASSERT(a.rfinseq == 0);
+    CU_ASSERT(a.lastpktislocal == 0);
+
+    CU_ASSERT(acktrack_se_is_local(&e) == e.is_local);
+    CU_ASSERT(e.is_local == 0);
+
+    CU_ASSERT(acktrack_se_seqno(&e) == e.seqno);
+    CU_ASSERT(e.seqno == 1001);
+
+    CU_ASSERT(acktrack_se_is_interesting(&e) == e.is_interesting);
+    CU_ASSERT(e.is_interesting == 1);
+
+    CU_ASSERT(acktrack_se_is_error(&e) == e.is_error);
+    CU_ASSERT(e.is_error == 0);
+
+    CU_ASSERT(acktrack_se_has_urg(&e) == e.has_urg);
+    CU_ASSERT(e.has_urg == 0);
+
+    CU_ASSERT(acktrack_se_has_ack(&e) == e.has_ack);
+    CU_ASSERT(e.has_ack == 1);
+
+    CU_ASSERT(acktrack_se_has_psh(&e) == e.has_psh);
+    CU_ASSERT(e.has_psh == 0);
+
+    CU_ASSERT(acktrack_se_has_rst(&e) == e.has_rst);
+    CU_ASSERT(e.has_rst == 0);
+
+    CU_ASSERT(acktrack_se_has_syn(&e) == e.has_syn);
+    CU_ASSERT(e.has_syn == 0);
+
+    CU_ASSERT(acktrack_se_has_fin(&e) == e.has_fin);
+    CU_ASSERT(e.has_fin == 0);
+    
+}
+
 int main(void)
 {
   CU_pSuite pSuite = NULL;
@@ -509,7 +616,8 @@ int main(void)
        (NULL == CU_add_test(pSuite, "isfinishing()", test_isfinishing)) ||
        (NULL == CU_add_test(pSuite, "isfinished()", test_isfinished)) ||
        (NULL == CU_add_test(pSuite, "logmsg()", test_logmsg)) ||
-       (NULL == CU_add_test(pSuite, "pcap_parsepacket()", test_parsepacket))
+       (NULL == CU_add_test(pSuite, "pcap_parsepacket() IPv4", test_parsepacket_v4)) ||
+       (NULL == CU_add_test(pSuite, "pcap_parsepacket() IPv6", test_parsepacket_v6))
       )
    {
       CU_cleanup_registry();
