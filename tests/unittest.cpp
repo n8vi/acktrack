@@ -380,6 +380,71 @@ void test_dloff(void)
 
 }
 
+void setup_acktrack_and_initial_packet(acktrack_t *a, u_char *p, const char * s_remote, const char * s_local)
+{
+
+    struct sockaddr *sa;
+    struct sockaddr_in *sa4;
+    struct sockaddr_in6 *sa6;
+    ip4_header *i4;
+    ip6_header *i6;
+    tcp_header *t;
+    u_int ip_len;
+    u_int tcp_len;
+
+    // Set up acktrack object
+    bzero(a, sizeof(acktrack_t));
+    a->curcap = (acktrack_cap_t*)malloc(sizeof(acktrack_cap_t));
+    a->curcap->handle = openloop();
+    CU_ASSERT_FATAL(a->curcap->handle != NULL);
+    memcpy((void*)&(a->remote), (void*)parseendpoint(s_remote), sizeof(a->remote));
+    memcpy((void*)&(a->local), (void*)parseendpoint(s_local), sizeof(a->local));
+    a->gotorigpkt = 0;
+
+    sa = (sockaddr*)&a->remote;
+    
+    // set up packet data
+    bzero(p, 65535);
+    switch(sa->sa_family) {
+        case AF_INET:
+            i4 = (ip4_header*)(p+pcap_dloff(a->curcap->handle));
+            i4->ver_ihl = 0x45;
+            memcpy((void*)&(i4->saddr), (void *)&(((struct sockaddr_in*)(&a->remote))->sin_addr), sizeof(struct sockaddr_in));
+            memcpy((void*)&(i4->daddr), (void *)&(((struct sockaddr_in*)(&a->local))->sin_addr), sizeof(struct sockaddr_in));
+            ip_len = (i4->ver_ihl & 0xf) * 4;
+            t = (tcp_header*)((u_char*)i4 + ip_len);
+            t->sport = ((struct sockaddr_in *)&(a->local))->sin_port;
+            t->dport = ((struct sockaddr_in *)&(a->remote))->sin_port;
+            break;
+        case AF_INET6:
+            i6 = (ip6_header*)(p+pcap_dloff(a->curcap->handle));
+            i6->ver_class_flowlabel = 0x60;
+            i6->next_header = 6;
+            memcpy((void*)&(i6->saddr), (void *)&(((struct sockaddr_in6*)(&a->remote))->sin6_addr), sizeof(struct sockaddr_in6));
+            memcpy((void*)&(i6->daddr), (void *)&(((struct sockaddr_in6*)(&a->local))->sin6_addr), sizeof(struct sockaddr_in6));
+            t = (tcp_header*)((u_char*)i6 + sizeof(ip6_header)); // for now test without extension headers
+            t->sport = ((struct sockaddr_in6 *)&(a->local))->sin6_port;
+            t->dport = ((struct sockaddr_in6 *)&(a->remote))->sin6_port;
+            break;
+        }
+
+    t->offset_reserved_flags_window = htonl(ACKFLAG);
+    t->seq_number = ntohl(1001);
+    t->ack_number = ntohl(2001);
+
+    tcp_len = 5; // for now
+    t->offset_reserved_flags_window |= htonl((tcp_len/4)<<28);
+    
+    switch(sa->sa_family) {
+        case AF_INET:
+            i4->tlen = ip_len+(tcp_len*4);
+            break;
+        case AF_INET6:
+            i6->payload_len = sizeof(tcp_header);
+            break;
+        }
+}
+
 void test_parsepacket_v4(void)
 {
     acktrack_t a;
@@ -391,35 +456,10 @@ void test_parsepacket_v4(void)
     u_int ip_len;
     u_int tcp_len;
 
-    // Set up acktrack object
-    a.curcap = (acktrack_cap_t*)malloc(sizeof(acktrack_cap_t));
-    a.curcap->handle = openloop();
-    CU_ASSERT_FATAL(a.curcap->handle != NULL);
-    memcpy((void*)&(a.remote), (void*)parseendpoint("2.2.2.2:2"), sizeof(a.remote));
-    memcpy((void*)&(a.local), (void*)parseendpoint("1.1.1.1:1"), sizeof(a.local));
-    a.gotorigpkt = 0;
-    
-    // set up pkthdr object
+    setup_acktrack_and_initial_packet(&a, p, "2.2.2.2:2", "1.1.1.1:1");
+
     h.ts.tv_sec = 100;
     h.ts.tv_usec = 200;
-
-    // set up packet data
-    i = (ip4_header*)(p+pcap_dloff(a.curcap->handle));
-    i->ver_ihl = 0x45;
-    memcpy((void*)&(i->saddr), (void *)&(((struct sockaddr_in*)(&a.remote))->sin_addr), sizeof(struct sockaddr_in));
-    memcpy((void*)&(i->daddr), (void *)&(((struct sockaddr_in*)(&a.local))->sin_addr), sizeof(struct sockaddr_in));
-    ip_len = (i->ver_ihl & 0xf) * 4;
-    t = (tcp_header*)((u_char*)i + ip_len);
-    t->sport = ((struct sockaddr_in *)&(a.local))->sin_port;
-    t->dport = ((struct sockaddr_in *)&(a.remote))->sin_port;
-    t->offset_reserved_flags_window = htonl(ACKFLAG);
-    t->seq_number = ntohl(1001);
-    t->ack_number = ntohl(2001);
-
-    tcp_len = 5; // for now
-    t->offset_reserved_flags_window |= htonl((tcp_len/4)<<28);
-
-    i->tlen = ip_len+(tcp_len*4);
 
     acktrack_parsepacket(&a, &h, p, &e);
 
@@ -496,37 +536,9 @@ void test_parsepacket_v6(void)
     u_int ip_len;
     u_int tcp_len;
 
-    bzero(&a, sizeof(acktrack_t));
-
-    // Set up acktrack object
-    a.curcap = (acktrack_cap_t*)malloc(sizeof(acktrack_cap_t));
-    a.curcap->handle = openloop();
-    CU_ASSERT_FATAL(a.curcap->handle != NULL);
-    memcpy((void*)&(a.remote), (void*)parseendpoint("[2::2]:2"), sizeof(a.remote));
-    memcpy((void*)&(a.local), (void*)parseendpoint("[1::1]:1"), sizeof(a.local));
-    a.gotorigpkt = 0;
-    
-    // set up pkthdr object
+    setup_acktrack_and_initial_packet(&a, p, "[2::2]:2", "[1::1]:1");
     h.ts.tv_sec = 100;
     h.ts.tv_usec = 200;
-
-    // set up packet data
-    i = (ip6_header*)(p+pcap_dloff(a.curcap->handle));
-    i->ver_class_flowlabel = 0x60;
-    i->next_header = 6;
-    memcpy((void*)&(i->saddr), (void *)&(((struct sockaddr_in6*)(&a.remote))->sin6_addr), sizeof(struct sockaddr_in6));
-    memcpy((void*)&(i->daddr), (void *)&(((struct sockaddr_in6*)(&a.local))->sin6_addr), sizeof(struct sockaddr_in6));
-    t = (tcp_header*)((u_char*)i + sizeof(ip6_header)); // for now test without extension headers
-    t->sport = ((struct sockaddr_in *)&(a.local))->sin_port;
-    t->dport = ((struct sockaddr_in *)&(a.remote))->sin_port;
-    t->offset_reserved_flags_window = htonl(ACKFLAG);
-    t->seq_number = ntohl(1001);
-    t->ack_number = ntohl(2001);
-
-    tcp_len = 5; // for now
-    t->offset_reserved_flags_window |= htonl((tcp_len/4)<<28);
-
-    i->payload_len = sizeof(tcp_header);
 
     acktrack_parsepacket(&a, &h, p, &e);
 
