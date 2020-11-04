@@ -769,7 +769,7 @@ int acktrack_opencap(acktrack_t *acktrack)
 }
 
 
-acktrack_t* CDECL acktrack_create_fromstrings(char* LocalEndPointStr, char* RemoteEndPointStr)
+acktrack_t* CDECL acktrack_create_fromstrings(const char* LocalEndPointStr, const char* RemoteEndPointStr)
 {
     static acktrack_t *ret;
 

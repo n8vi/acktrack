@@ -542,6 +542,84 @@ void test_parsepacket_v6(void)
     run_parsepacket_tests("[2::2]:2", "[1::1]:1");
 }
 
+void test_se_funcs(void)
+{
+    sequence_event_t se;
+
+    bzero(&se, sizeof(se));
+
+    CU_ASSERT(acktrack_se_ts_sec(&se) == 0);
+    CU_ASSERT(acktrack_se_ts_usec(&se) == 0);
+    CU_ASSERT(acktrack_se_is_local(&se) == 0);
+    CU_ASSERT(acktrack_se_seqno(&se) == 0);
+    CU_ASSERT(acktrack_se_is_interesting(&se) == 0);
+    CU_ASSERT(acktrack_se_is_error(&se) == 0);
+
+    CU_ASSERT(acktrack_se_has_urg(&se) == 0);
+    CU_ASSERT(acktrack_se_has_ack(&se) == 0);
+    CU_ASSERT(acktrack_se_has_psh(&se) == 0);
+    CU_ASSERT(acktrack_se_has_rst(&se) == 0);
+    CU_ASSERT(acktrack_se_has_syn(&se) == 0);
+    CU_ASSERT(acktrack_se_has_fin(&se) == 0);
+
+    se.ts.tv_sec=1010;
+    CU_ASSERT(acktrack_se_ts_sec(&se) == 1010);
+    CU_ASSERT(acktrack_se_ts_usec(&se) == 0);
+
+    se.ts.tv_sec=0;
+    se.ts.tv_usec=1010;
+    CU_ASSERT(acktrack_se_ts_sec(&se) == 0);
+    CU_ASSERT(acktrack_se_ts_usec(&se) == 1010);
+
+    se.ts.tv_usec=0;
+    se.is_local = 1;
+    se.seqno = 1010;
+    se.is_interesting = 1;
+    se.is_error = 1;
+
+    CU_ASSERT(acktrack_se_ts_sec(&se) == 0);
+    CU_ASSERT(acktrack_se_ts_usec(&se) == 0);
+    CU_ASSERT(acktrack_se_is_local(&se) == 1);
+    CU_ASSERT(acktrack_se_seqno(&se) == 1010);
+    CU_ASSERT(acktrack_se_is_interesting(&se) == 1);
+    CU_ASSERT(acktrack_se_is_error(&se) == 1);
+
+    se.is_local = 0;
+    se.seqno = 0;
+    se.is_interesting = 0;
+    se.is_error = 0;
+
+    se.has_urg = 1;
+    se.has_ack = 1;
+    se.has_psh = 1;
+    se.has_rst = 1;
+    se.has_syn = 1;
+    se.has_fin = 1;
+
+    CU_ASSERT(acktrack_se_is_error(&se) == 0);
+
+    CU_ASSERT(acktrack_se_has_urg(&se) == 1);
+    CU_ASSERT(acktrack_se_has_ack(&se) == 1);
+    CU_ASSERT(acktrack_se_has_psh(&se) == 1);
+    CU_ASSERT(acktrack_se_has_rst(&se) == 1);
+    CU_ASSERT(acktrack_se_has_syn(&se) == 1);
+    CU_ASSERT(acktrack_se_has_fin(&se) == 1);
+}
+
+void test_acktrack_create_fromstrings(void)
+{
+    acktrack_t *a;
+
+    a = acktrack_create_fromstrings("1.1.1.1:1", "2.2.2.2:2");
+
+    CU_ASSERT(ntohs(get_port((struct sockaddr*)&(a->local))) == 1);
+    CU_ASSERT(ntohs(get_port((struct sockaddr*)&(a->remote))) == 2);
+
+    CU_ASSERT(!strcmp(get_ip_str((struct sockaddr*)&(a->local)), "1.1.1.1"));
+    CU_ASSERT(!strcmp(get_ip_str((struct sockaddr*)&(a->remote)), "2.2.2.2"));
+}
+
+
 int main(void)
 {
   CU_pSuite pSuite = NULL;
@@ -570,7 +648,9 @@ int main(void)
        (NULL == CU_add_test(pSuite, "isfinished()", test_isfinished)) ||
        (NULL == CU_add_test(pSuite, "logmsg()", test_logmsg)) ||
        (NULL == CU_add_test(pSuite, "pcap_parsepacket() IPv4", test_parsepacket_v4)) ||
-       (NULL == CU_add_test(pSuite, "pcap_parsepacket() IPv6", test_parsepacket_v6))
+       (NULL == CU_add_test(pSuite, "pcap_parsepacket() IPv6", test_parsepacket_v6)) ||
+       (NULL == CU_add_test(pSuite, "Sequence event convenience functions", test_se_funcs)) ||
+       (NULL == CU_add_test(pSuite, "acktrack_create_fromstrings()", test_acktrack_create_fromstrings))
       )
    {
       CU_cleanup_registry();

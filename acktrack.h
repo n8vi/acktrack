@@ -135,7 +135,7 @@ extern "C" ACKTRACK_API u_int CDECL acktrack_lastlack(acktrack_t *acktrack);
 // For VB ...
 // Public Declare Ansi Function acktrack_create_fromstrings Lib "acktrack.dll" Alias "acktrack_create_fromstrings" (ByVal LocalEndPointStr As String, ByVal RemoteEndPointStr As String) As IntPtr
 // cs = acktrack_create_fromstrings(socket.LocalEndPoint.ToString(), socket.RemoteEndPoint.ToString());
-extern "C" ACKTRACK_API acktrack_t * CDECL acktrack_create_fromstrings(char* LocalEndPointStr, char* RemoteEndPointStr);
+extern "C" ACKTRACK_API acktrack_t * CDECL acktrack_create_fromstrings(const char* LocalEndPointStr, const char* RemoteEndPointStr);
 extern "C" ACKTRACK_API sequence_event_t * CDECL acktrack_next(acktrack_t * acktrack);
 extern "C" ACKTRACK_API long CDECL acktrack_se_ts_sec(sequence_event_t *se);
 extern "C" ACKTRACK_API long CDECL acktrack_se_ts_usec(sequence_event_t *se);
