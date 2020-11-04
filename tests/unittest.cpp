@@ -445,18 +445,22 @@ void setup_acktrack_and_initial_packet(acktrack_t *a, u_char *p, const char * s_
         }
 }
 
-void test_parsepacket_v4(void)
+void run_parsepacket_tests(const char *src, const char *dst)
 {
     acktrack_t a;
-    struct pcap_pkthdr h;
     u_char p[65590];
+
+    acktrack_t ia;
+    u_char ip[65590];
+
+    struct pcap_pkthdr h;
     sequence_event_t e;
     ip4_header *i;
     tcp_header *t;
     u_int ip_len;
     u_int tcp_len;
 
-    setup_acktrack_and_initial_packet(&a, p, "2.2.2.2:2", "1.1.1.1:1");
+    setup_acktrack_and_initial_packet(&a, p, src, dst);
 
     h.ts.tv_sec = 100;
     h.ts.tv_usec = 200;
@@ -522,86 +526,20 @@ void test_parsepacket_v4(void)
 
     CU_ASSERT(acktrack_se_has_fin(&e) == e.has_fin);
     CU_ASSERT(e.has_fin == 0);
+
+    memcpy(&ia, &a, sizeof(a));
+    memcpy(ip, p, sizeof(a));
     
+}
+
+void test_parsepacket_v4(void)
+{
+    run_parsepacket_tests("1.1.1.1:1", "2.2.2.2:2");
 }
 
 void test_parsepacket_v6(void)
 {
-    acktrack_t a;
-    struct pcap_pkthdr h;
-    u_char p[65590];
-    sequence_event_t e;
-    ip6_header *i;
-    tcp_header *t;
-    u_int ip_len;
-    u_int tcp_len;
-
-    setup_acktrack_and_initial_packet(&a, p, "[2::2]:2", "[1::1]:1");
-    h.ts.tv_sec = 100;
-    h.ts.tv_usec = 200;
-
-    acktrack_parsepacket(&a, &h, p, &e);
-
-    CU_ASSERT(a.lseqorig == 1000);
-    CU_ASSERT(a.rseqorig == 2000);
-    CU_ASSERT(a.gotorigpkt == 1);
-
-    CU_ASSERT(a.origtime.tv_sec == a.lastacktime.tv_sec);
-    CU_ASSERT(a.lastacktime.tv_sec == 100);
-
-    CU_ASSERT(a.origtime.tv_usec == a.lastacktime.tv_usec);
-    CU_ASSERT(a.lastacktime.tv_usec == 200);
-
-    CU_ASSERT(a.gotrfin == 0);
-    CU_ASSERT(a.gotlfin == 0);
-    CU_ASSERT(a.gotrst == 0);
-
-    CU_ASSERT(acktrack_lastlack(&a) == a.lastlack);
-    CU_ASSERT(a.lastlack == 2001);
-
-    CU_ASSERT(acktrack_lastrack(&a) == a.lastrack);
-    CU_ASSERT(a.lastrack == 0);
-
-    CU_ASSERT(acktrack_lastrseq(&a) == a.lastrseq);
-    CU_ASSERT(a.lastrseq == 1001);
-
-    CU_ASSERT(acktrack_lastlseq(&a) == a.lastlseq);
-    CU_ASSERT(a.lastlseq == 0);
-
-    CU_ASSERT(a.lfinseq ==0);
-    CU_ASSERT(a.rfinseq == 0);
-    CU_ASSERT(a.lastpktislocal == 0);
-
-    CU_ASSERT(acktrack_se_is_local(&e) == e.is_local);
-    CU_ASSERT(e.is_local == 0);
-
-    CU_ASSERT(acktrack_se_seqno(&e) == e.seqno);
-    CU_ASSERT(e.seqno == 1001);
-
-    CU_ASSERT(acktrack_se_is_interesting(&e) == e.is_interesting);
-    CU_ASSERT(e.is_interesting == 1);
-
-    CU_ASSERT(acktrack_se_is_error(&e) == e.is_error);
-    CU_ASSERT(e.is_error == 0);
-
-    CU_ASSERT(acktrack_se_has_urg(&e) == e.has_urg);
-    CU_ASSERT(e.has_urg == 0);
-
-    CU_ASSERT(acktrack_se_has_ack(&e) == e.has_ack);
-    CU_ASSERT(e.has_ack == 1);
-
-    CU_ASSERT(acktrack_se_has_psh(&e) == e.has_psh);
-    CU_ASSERT(e.has_psh == 0);
-
-    CU_ASSERT(acktrack_se_has_rst(&e) == e.has_rst);
-    CU_ASSERT(e.has_rst == 0);
-
-    CU_ASSERT(acktrack_se_has_syn(&e) == e.has_syn);
-    CU_ASSERT(e.has_syn == 0);
-
-    CU_ASSERT(acktrack_se_has_fin(&e) == e.has_fin);
-    CU_ASSERT(e.has_fin == 0);
-    
+    run_parsepacket_tests("[2::2]:2", "[1::1]:1");
 }
 
 int main(void)
