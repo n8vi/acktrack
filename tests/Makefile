@@ -17,7 +17,7 @@ acktrack.o: ../acktrack.cpp
 test: unittest
 	(cd ../cdemo; make)
 	$(SUDO) pytest-3 -p no:logging -v
-	$(SUDO) ./unittest
+	$(SUDO) valgrind --leak-check=full --error-exitcode=1 ./unittest
 
 clean:
 	$(SUDO) rm -fr *.o fixture __pycache__
