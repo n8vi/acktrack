@@ -9,3 +9,7 @@ tests/__pycache__/
 tests/fixture
 tests/unittest
 tests/.cache
+tests/*.gcda
+tests/*.gcno
+tests/coverage.info
+

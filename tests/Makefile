@@ -1,6 +1,6 @@
 LDLIBS=-lpcap -lcunit
 CFLAGS=-ggdb
-CC:=$(CC) $(CFLAGS)
+CC:=g++ --coverage $(CFLAGS)
 SUDO=$(shell which sudo)
 
 all: unittest
@@ -12,7 +12,10 @@ unittest: unittest.o acktrack.o
 	$(CC) -o unittest unittest.o acktrack.o $(LDLIBS)
 
 acktrack.o: ../acktrack.cpp
-	$(CC) -c ../acktrack.cpp $(LDLIBS)
+	$(CC) -c ../acktrack.cpp # $(LDLIBS)
+
+unittest.o: unittest.cpp
+	$(CC) -c unittest.cpp # $(LDLIBS)
 
 test: unittest
 	(cd ../cdemo; make)
