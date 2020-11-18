@@ -118,6 +118,8 @@ void check_get_filter(const char *lip, const char *lport, const char *rip, const
 			        lip, lport, rip, rport,
 				rip, rport, lip, lport);
 	CU_ASSERT(!strcmp(f, filter));
+
+        free(a);
 	
 }
 
@@ -164,6 +166,7 @@ void test_relseq_rseq(void)
 	a = (acktrack_t*)malloc(sizeof(acktrack_t));
 	a->rseqorig = 1000;
 	CU_ASSERT(relseq(a,1024,0) == 24);
+        free(a);
 }
 
 void test_relseq_lseq(void)
@@ -173,6 +176,7 @@ void test_relseq_lseq(void)
 	a = (acktrack_t*)malloc(sizeof(acktrack_t));
 	a->lseqorig = 1000;
 	CU_ASSERT(relseq(a,1024,1) == 24);
+        free(a);
 }
 
 void test_acktrack_t(void)
@@ -206,6 +210,8 @@ void test_acktrack_t(void)
     CU_ASSERT(b == 2000);
     b = acktrack_lastlack(a);
     CU_ASSERT(b == 1000);
+
+    free(a);
 }
 
 
@@ -246,6 +252,8 @@ void check_socket_filter(const char *endpoint)
 	a = acktrack_create(s);
 
 	CU_ASSERT(!strcmp(get_filter(a), filter));
+
+        acktrack_free(a);
 }
 
 
@@ -308,6 +316,8 @@ void test_isfinishing(void)
     // either side reset
     a->gotrst = 1;
     CU_ASSERT(acktrack_isfinishing(a));
+
+    free(a);
 }
 
 void test_isfinished(void)
@@ -347,6 +357,8 @@ void test_isfinished(void)
     CU_ASSERT(!acktrack_isfinished(a));
     a->lfinseq = 1;
     CU_ASSERT(!acktrack_isfinished(a));
+    
+    free(a);
 }
 
 pcap_t *openloop(void)
@@ -372,11 +384,11 @@ void test_dloff(void)
     acktrack_t *a;
 
     a = (acktrack_t*)malloc(sizeof(acktrack_t));
-    a->curcap = (acktrack_cap_t*)malloc(sizeof(acktrack_cap_t));
-    a->curcap->handle = openloop();
-    CU_ASSERT_FATAL(a->curcap->handle != NULL);    
+    a->curcap = (pcap_t**)malloc(sizeof(pcap_t*));
+    *(a->curcap) = openloop();
+    CU_ASSERT_FATAL(a->curcap != NULL);    
     // printf("\n\n%d\n\n", pcap_dloff(a->curcap->handle));
-    CU_ASSERT(pcap_dloff(a->curcap->handle) == 4);    
+    CU_ASSERT(pcap_dloff(*(a->curcap)) == 4);    
 
 }
 
@@ -394,9 +406,11 @@ void setup_acktrack_and_initial_packet(acktrack_t *a, u_char *p, const char * s_
 
     // Set up acktrack object
     bzero(a, sizeof(acktrack_t));
-    a->curcap = (acktrack_cap_t*)malloc(sizeof(acktrack_cap_t));
-    a->curcap->handle = openloop();
-    CU_ASSERT_FATAL(a->curcap->handle != NULL);
+    a->curcap = (pcap_t**)malloc(sizeof(pcap_t*));
+    CU_ASSERT_FATAL(a->curcap != NULL);
+    *(a->curcap) = openloop();
+    // CU_ASSERT_FATAL(a->curcap->handle != NULL);
+    CU_ASSERT_FATAL(*(a->curcap) != NULL);
     memcpy((void*)&(a->remote), (void*)parseendpoint(s_remote), sizeof(a->remote));
     memcpy((void*)&(a->local), (void*)parseendpoint(s_local), sizeof(a->local));
     a->gotorigpkt = 0;
@@ -407,7 +421,7 @@ void setup_acktrack_and_initial_packet(acktrack_t *a, u_char *p, const char * s_
     bzero(p, 65535);
     switch(sa->sa_family) {
         case AF_INET:
-            i4 = (ip4_header*)(p+pcap_dloff(a->curcap->handle));
+            i4 = (ip4_header*)(p+pcap_dloff(*(a->curcap)));
             i4->ver_ihl = 0x45;
             memcpy((void*)&(i4->saddr), (void *)&(((struct sockaddr_in*)(&a->remote))->sin_addr), sizeof(struct sockaddr_in));
             memcpy((void*)&(i4->daddr), (void *)&(((struct sockaddr_in*)(&a->local))->sin_addr), sizeof(struct sockaddr_in));
@@ -417,7 +431,7 @@ void setup_acktrack_and_initial_packet(acktrack_t *a, u_char *p, const char * s_
             t->dport = ((struct sockaddr_in *)&(a->remote))->sin_port;
             break;
         case AF_INET6:
-            i6 = (ip6_header*)(p+pcap_dloff(a->curcap->handle));
+            i6 = (ip6_header*)(p+pcap_dloff(*(a->curcap)));
             i6->ver_class_flowlabel = 0x60;
             i6->next_header = 6;
             memcpy((void*)&(i6->saddr), (void *)&(((struct sockaddr_in6*)(&a->remote))->sin6_addr), sizeof(struct sockaddr_in6));

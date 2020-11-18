@@ -1,6 +1,8 @@
 #include "acktrack.h"
 #include <stdio.h>
 
+#define LOGFILE "/tmp/acktrack.log"
+
 #define _WINSOCK_DEPRECATED_NO_WARNINGS 1
 #define _CRT_SECURE_NO_WARNINGS 1
 
