@@ -1,5 +1,6 @@
 CFLAGS=-ggdb
 LDLIBS = -lacktrack
+LDFLAGS = -L..
 
 LOGFILE?=\"acktrack.log\"
 
@@ -11,8 +12,11 @@ endif
 
 all: cdemo
 
-cdemo: cdemo.cpp ../libacktrack.so
-	gcc -o cdemo -I.. cdemo.cpp -L.. $(LDLIBS) $(DEFS)
+cdemo: cdemo.o ../libacktrack.so
+	gcc -o cdemo -I.. cdemo.o ../libacktrack.so 
+
+cdemo.o: cdemo.cpp ../acktrack.h
+	gcc -c cdemo.cpp -I.. $(DEFS)
 
 ../acktrack.o: ../acktrack.cpp
 	(cd ..; make acktrack.o)

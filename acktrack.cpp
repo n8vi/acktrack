@@ -585,9 +585,14 @@ sequence_event_t *acktrack_next(acktrack_t *acktrack)
     }
 
     // if (acktrack->curcap == NULL || acktrack->curcap->handle == NULL)
-    if (acktrack->curcap == NULL || acktrack->curcap == NULL)
+    if (acktrack->curcap == NULL || *(acktrack->curcap) == NULL) {
         acktrack->curcap = acktrack->caps;
+        }
   
+    if (acktrack->curcap == NULL || *(acktrack->curcap) == NULL) {
+        logmsg("interface list got mangled?");
+        return NULL;
+        }
 
     orig = acktrack->curcap;
 
@@ -600,7 +605,7 @@ sequence_event_t *acktrack_next(acktrack_t *acktrack)
         // logmsg("pcap_next_ex(...%x)", acktrack->curcap->handle);
         logmsg("pcap_next_ex(...%x)", acktrack->curcap);
         // result = pcap_next_ex(acktrack->curcap->handle, &pkthdr, &packet);
-        result = pcap_next_ex(*acktrack->curcap, &pkthdr, &packet);
+        result = pcap_next_ex(*(acktrack->curcap), &pkthdr, &packet);
         switch (result) {
         case 0: // timeout expired
             logmsg("ACKTRACK_NEXT: timeout expired");
@@ -618,7 +623,7 @@ sequence_event_t *acktrack_next(acktrack_t *acktrack)
         }
         acktrack->curcap++;
         // if (acktrack->curcap->handle == NULL)
-        if (acktrack->curcap == NULL)
+        if (*(acktrack->curcap) == NULL)
             acktrack->curcap = acktrack->caps;
     } while (acktrack->curcap != orig && !ret.is_interesting);
 
@@ -632,9 +637,9 @@ void CDECL acktrack_dispatch(acktrack_t* acktrack, acktrack_cb_t cb)
     acktrack->curcap = acktrack->caps;
 
     //while (acktrack->curcap->handle) {
-    while (acktrack->curcap) {
+    while (*(acktrack->curcap)) {
         //pcap_dispatch(acktrack->curcap->handle, -1, acktrack_callback, (u_char*)acktrack);
-        pcap_dispatch(*acktrack->curcap, -1, acktrack_callback, (u_char*)acktrack);
+        pcap_dispatch(*(acktrack->curcap), -1, acktrack_callback, (u_char*)acktrack);
         acktrack->curcap++;
     }
 }
