@@ -1,0 +1,23 @@
+# Example at http://yuba.stanford.edu/~casado/pcap/section1.html also triggers this
+{
+   <hcigetdevlist>
+   Memcheck:Param
+   ioctl(HCIGETDEVLIST)
+   fun:ioctl
+   ...
+   fun:pcap_findalldevs
+   ...
+}
+
+# Example at http://yuba.stanford.edu/~casado/pcap/section1.html also triggers this
+{
+   <sendto_param>
+   Memcheck:Param
+   socketcall.sendto(msg)
+   fun:sendto
+   ...
+   fun:pcap_activate
+   ...
+   fun:pcap_findalldevs
+   ...
+}

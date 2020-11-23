@@ -366,13 +366,16 @@ pcap_t *openloop(void)
     pcap_if_t *alldevs;
     char errbuf[PCAP_ERRBUF_SIZE];
     pcap_if_t *d;
+    pcap_t *ret;
 
     if (pcap_findalldevs(&alldevs, errbuf) == -1)
         return NULL;
 
     for (d=alldevs; d != NULL; d = d->next) {
         if (d->flags & PCAP_IF_LOOPBACK) {
-            return pcap_open_live(d->name, BUFSIZ, 0, -1,errbuf);
+            ret = pcap_open_live(d->name, BUFSIZ, 0, -1,errbuf);
+            pcap_freealldevs(alldevs);
+            return ret;
             }
         }
 
@@ -541,9 +544,13 @@ void run_parsepacket_tests(const char *src, const char *dst)
     CU_ASSERT(acktrack_se_has_fin(&e) == e.has_fin);
     CU_ASSERT(e.has_fin == 0);
 
+/*  // half finished thought?
     memcpy(&ia, &a, sizeof(a));
     memcpy(ip, p, sizeof(a));
-    
+*/
+
+   free(a.curcap);    
+
 }
 
 void test_parsepacket_v4(void)

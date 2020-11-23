@@ -20,7 +20,7 @@ unittest.o: unittest.cpp
 test: unittest
 	(cd ../cdemo; make)
 	$(SUDO) pytest-3 -p no:logging -v
-	$(SUDO) valgrind --leak-check=full --error-exitcode=1 ./unittest
+	$(SUDO) valgrind --suppressions=libpcap.supp --track-origins=yes --log-file="valgrind.log" --leak-check=full --error-exitcode=1 ./unittest
 
 clean:
 	$(SUDO) rm -fr *.o fixture __pycache__

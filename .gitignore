@@ -12,4 +12,4 @@ tests/.cache
 tests/*.gcda
 tests/*.gcno
 tests/coverage.info
-
+tests/valgrind.log
