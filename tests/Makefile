@@ -14,7 +14,7 @@ unittest: unittest.o acktrack.o
 acktrack.o: ../acktrack.cpp
 	$(CC) -c ../acktrack.cpp # $(LDLIBS)
 
-unittest.o: unittest.cpp
+unittest.o: unittest.cpp acktrack.o
 	$(CC) -c unittest.cpp # $(LDLIBS)
 
 test: unittest

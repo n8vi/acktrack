@@ -250,6 +250,7 @@ void check_socket_filter(const char *endpoint)
 	snprintf(filter, 320, "%.177s or (src host %s and src port %s and dst host %s and dst port %d))", temp, host, port, get_ip_str(lsa), ntohs(get_port(lsa)));
 
 	a = acktrack_create(s);
+	a->caps = NULL;
 
 	CU_ASSERT(!strcmp(get_filter(a), filter));
 
@@ -382,18 +383,20 @@ pcap_t *openloop(void)
     return NULL;
 }
 
+/*
+ * FIXME
 void test_dloff(void)
 {
-    acktrack_t *a;
+    pcap_t *p;
 
-    a = (acktrack_t*)malloc(sizeof(acktrack_t));
-    a->curcap = (pcap_t**)malloc(sizeof(pcap_t*));
+     = (acktrack_cap_t**)malloc(sizeof(acktrack_cap_t));
     *(a->curcap) = openloop();
     CU_ASSERT_FATAL(a->curcap != NULL);    
     // printf("\n\n%d\n\n", pcap_dloff(a->curcap->handle));
-    CU_ASSERT(pcap_dloff(*(a->curcap)) == 4);    
+    CU_ASSERT(pcap_dloff(*(a->curcap->handle)) == 4);    
 
 }
+*/
 
 void setup_acktrack_and_initial_packet(acktrack_t *a, u_char *p, const char * s_remote, const char * s_local)
 {
@@ -409,11 +412,11 @@ void setup_acktrack_and_initial_packet(acktrack_t *a, u_char *p, const char * s_
 
     // Set up acktrack object
     bzero(a, sizeof(acktrack_t));
-    a->curcap = (pcap_t**)malloc(sizeof(pcap_t*));
+    a->curcap = (acktrack_cap_t*)malloc(sizeof(acktrack_cap_t));
     CU_ASSERT_FATAL(a->curcap != NULL);
-    *(a->curcap) = openloop();
+    a->curcap->handle = openloop();
     // CU_ASSERT_FATAL(a->curcap->handle != NULL);
-    CU_ASSERT_FATAL(*(a->curcap) != NULL);
+    CU_ASSERT_FATAL(a->curcap->handle != NULL);
     memcpy((void*)&(a->remote), (void*)parseendpoint(s_remote), sizeof(a->remote));
     memcpy((void*)&(a->local), (void*)parseendpoint(s_local), sizeof(a->local));
     a->gotorigpkt = 0;
@@ -424,7 +427,7 @@ void setup_acktrack_and_initial_packet(acktrack_t *a, u_char *p, const char * s_
     bzero(p, 65535);
     switch(sa->sa_family) {
         case AF_INET:
-            i4 = (ip4_header*)(p+pcap_dloff(*(a->curcap)));
+            i4 = (ip4_header*)(p+pcap_dloff(a->curcap->handle));
             i4->ver_ihl = 0x45;
             memcpy((void*)&(i4->saddr), (void *)&(((struct sockaddr_in*)(&a->remote))->sin_addr), sizeof(struct sockaddr_in));
             memcpy((void*)&(i4->daddr), (void *)&(((struct sockaddr_in*)(&a->local))->sin_addr), sizeof(struct sockaddr_in));
@@ -434,7 +437,7 @@ void setup_acktrack_and_initial_packet(acktrack_t *a, u_char *p, const char * s_
             t->dport = ((struct sockaddr_in *)&(a->remote))->sin_port;
             break;
         case AF_INET6:
-            i6 = (ip6_header*)(p+pcap_dloff(*(a->curcap)));
+            i6 = (ip6_header*)(p+pcap_dloff(a->curcap->handle));
             i6->ver_class_flowlabel = 0x60;
             i6->next_header = 6;
             memcpy((void*)&(i6->saddr), (void *)&(((struct sockaddr_in6*)(&a->remote))->sin6_addr), sizeof(struct sockaddr_in6));

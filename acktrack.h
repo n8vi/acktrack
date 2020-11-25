@@ -72,6 +72,13 @@ typedef struct sequence_event {
     u_char has_fin;
 } sequence_event_t;
 
+typedef struct acktrack_cap_t {
+    pcap_t *handle;
+    char *iface_name;
+    struct bpf_program *bpfp;
+    } acktrack_cap_t;
+    
+
 /*
 typedef struct acktrack_cap_t {
     pcap_t    *handle;
@@ -110,11 +117,11 @@ typedef struct acktrack_t {
     u_int lastlack;              /* the last ack we got */
     u_int lfinseq;               /* the sequence number of our local FIN packet if gotlfin */
     u_int rfinseq;               /* the sequence number of the FIN from the remote if gotrfin */
-    // acktrack_cap_t *caps;        /* an array of pcap handles of all interfaces with ipv4 on them */
-    pcap_t **caps;
+    acktrack_cap_t *caps;        /* an array of pcap handles of all interfaces with ipv4 on them */
+    // pcap_t **caps;
     u_char lastpktislocal;       /* nonzero if last packet seen was sent by us */
-    //acktrack_cap_t *curcap;      /* current pcap_t handle used by acktrack_next() */
-    pcap_t **curcap;
+    acktrack_cap_t *curcap;      /* current pcap_t handle used by acktrack_next() */
+    // pcap_t **curcap;
     void *cb;
 } acktrack_t;
 
