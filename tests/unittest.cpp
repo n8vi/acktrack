@@ -414,8 +414,9 @@ void setup_acktrack_and_initial_packet(acktrack_t *a, u_char *p, const char * s_
     bzero(a, sizeof(acktrack_t));
     a->curcap = (acktrack_cap_t*)malloc(sizeof(acktrack_cap_t));
     CU_ASSERT_FATAL(a->curcap != NULL);
+    a->curcap->bpfp = NULL;
+    a->curcap->iface_name = NULL;
     a->curcap->handle = openloop();
-    // CU_ASSERT_FATAL(a->curcap->handle != NULL);
     CU_ASSERT_FATAL(a->curcap->handle != NULL);
     memcpy((void*)&(a->remote), (void*)parseendpoint(s_remote), sizeof(a->remote));
     memcpy((void*)&(a->local), (void*)parseendpoint(s_local), sizeof(a->local));
@@ -551,7 +552,7 @@ void run_parsepacket_tests(const char *src, const char *dst)
     memcpy(&ia, &a, sizeof(a));
     memcpy(ip, p, sizeof(a));
 */
-
+   acktrack_cap_free(a.curcap);
    free(a.curcap);    
 
 }

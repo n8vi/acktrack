@@ -201,6 +201,7 @@ void CDECL acktrack_free(acktrack_t* acktrack)
         if (p = acktrack->caps) {
             while (p) {
                 acktrack_cap_free(p);
+                p++;
                 }
             free(acktrack->caps);
             }
@@ -757,6 +758,10 @@ int acktrack_opencap(acktrack_t *acktrack)
     i = 0;
 
     for (d=f; d!= NULL; d = d->next) {
+        descr[i].iface_name = (char*)malloc(strlen(d->name)+1);
+        if (descr[i].iface_name)
+            strcpy(descr[i].iface_name, d->name);
+
         descr[i].handle = pcap_open_live(d->name, BUFSIZ, 0, -1,errbuf);
         // descr[i] = pcap_open_live(d->name, BUFSIZ, 0, -1,errbuf);
 

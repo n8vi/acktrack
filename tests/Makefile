@@ -20,7 +20,13 @@ unittest.o: unittest.cpp acktrack.o
 test: unittest
 	(cd ../cdemo; make)
 	$(SUDO) pytest-3 -p no:logging -v
+	make testunits
+
+testunits:
 	$(SUDO) valgrind --suppressions=libpcap.supp --track-origins=yes --log-file="valgrind.log" --leak-check=full --error-exitcode=1 ./unittest
 
 clean:
-	$(SUDO) rm -fr *.o fixture __pycache__
+	$(SUDO) rm -fr *.o fixture __pycache__ *.gcda *.gcno *.info valgrind.log
+
+
+

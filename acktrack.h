@@ -127,6 +127,7 @@ typedef struct acktrack_t {
 
 typedef void (*acktrack_cb_t)(acktrack_t*, sequence_event_t *);
 
+extern "C" ACKTRACK_API void CDECL acktrack_cap_free(acktrack_cap_t* cap);
 extern "C" ACKTRACK_API void CDECL acktrack_free(acktrack_t *acktrack);
 extern "C" ACKTRACK_API int CDECL acktrack_isfinished(acktrack_t *acktrack);
 extern "C" ACKTRACK_API int CDECL acktrack_isfinishing(acktrack_t *acktrack);

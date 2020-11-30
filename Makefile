@@ -14,6 +14,7 @@ demo:
 
 clean:
 	(cd cdemo; make clean)
+	(cd tests; make clean)
 	rm -fr *.o *.so $(PROJECT) *.deb
 
 acktrack.o: acktrack.cpp
