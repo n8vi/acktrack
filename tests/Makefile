@@ -23,7 +23,8 @@ test: unittest
 	make testunits
 
 testunits:
-	$(SUDO) valgrind --suppressions=libpcap.supp --track-origins=yes --log-file="valgrind.log" --leak-check=full --error-exitcode=1 ./unittest
+	# $(SUDO) valgrind --suppressions=libpcap.supp --track-origins=yes --log-file="valgrind.log" --leak-check=full --error-exitcode=1 ./unittest
+	$(SUDO) valgrind --main-stacksize=500000000 --suppressions=libpcap.supp --track-origins=yes --leak-check=full --error-exitcode=1 ./unittest
 
 clean:
 	$(SUDO) rm -fr *.o fixture __pycache__ *.gcda *.gcno *.info valgrind.log

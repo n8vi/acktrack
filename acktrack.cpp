@@ -182,12 +182,15 @@ struct sockaddr *parseendpoint(const char* endpoint)
 
 void CDECL acktrack_cap_free(acktrack_cap_t* cap)
 {
-    if (cap->bpfp)
-        pcap_freecode(cap->bpfp);
-    if(cap->iface_name)
-        free(cap->iface_name);
     if (cap->handle)
         pcap_close(cap->handle);
+        if (cap->bpfp) {
+            pcap_freecode(cap->bpfp);
+	    free(cap->bpfp);
+	   // fprintf(stderr, " ====> freed code %p\n", cap->bpfp);
+            }
+        if(cap->iface_name)
+            free(cap->iface_name);
 }
 
 
@@ -199,7 +202,7 @@ void CDECL acktrack_free(acktrack_t* acktrack)
         if (lfp)
             logmsg("Closing ACKTRACK");
         if (p = acktrack->caps) {
-            while (p) {
+            while (p->handle) {
                 acktrack_cap_free(p);
                 p++;
                 }
@@ -758,13 +761,10 @@ int acktrack_opencap(acktrack_t *acktrack)
     i = 0;
 
     for (d=f; d!= NULL; d = d->next) {
-        descr[i].iface_name = (char*)malloc(strlen(d->name)+1);
-        if (descr[i].iface_name)
-            strcpy(descr[i].iface_name, d->name);
 
         descr[i].handle = pcap_open_live(d->name, BUFSIZ, 0, -1,errbuf);
         // descr[i] = pcap_open_live(d->name, BUFSIZ, 0, -1,errbuf);
-
+	
         if(descr[i].handle == NULL) {
         // if(descr[i] == NULL) {
             logmsg("pcap_open_live failed for interface %s", d->name);
@@ -773,9 +773,15 @@ int acktrack_opencap(acktrack_t *acktrack)
             return 2;
             }
 
+        descr[i].iface_name = (char*)malloc(strlen(d->name)+1);
+        if (descr[i].iface_name)
+            strcpy(descr[i].iface_name, d->name);
+
+
     // compile the filter string we built above into a BPF binary.  The string, by the way, can be tested with
     // tshark or wireshark
         descr[i].bpfp = (struct bpf_program*)malloc(sizeof(bpf_program));
+//	fprintf(stderr, "\n =====> allocated code %p\n", descr[i].bpfp);
         if (pcap_compile(descr[i].handle, descr[i].bpfp, filter, 0, PCAP_NETMASK_UNKNOWN) == -1) {
         // // if (pcap_compile(descr[i].handle, &fp, filter, 0, PCAP_NETMASK_UNKNOWN) == -1) {
         // if (pcap_compile(descr[i], &(acktrack->bpfp), filter, 0, PCAP_NETMASK_UNKNOWN) == -1) {
@@ -804,7 +810,7 @@ int acktrack_opencap(acktrack_t *acktrack)
 
 
     descr[i].handle = NULL;
-    // descr[i] = NULL;
+    //descr[i] = NULL;
 
     pcap_freealldevs(alldevs);
     acktrack_freeip4devs(f); // well, this is misnamed now
