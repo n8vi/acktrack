@@ -563,7 +563,7 @@ void CDECL acktrack_callback(u_char* user, const struct pcap_pkthdr* pkthdr, con
         cb(acktrack, &event_data);
 }
 
-void CDECL acktrack_freeip4devs(pcap_if_t* f) // well, this is misnamed now
+void CDECL acktrack_freedevs(pcap_if_t* f) 
 {
     pcap_if_t* n;
 
@@ -768,7 +768,7 @@ int acktrack_opencap(acktrack_t *acktrack)
         if(descr[i].handle == NULL) {
         // if(descr[i] == NULL) {
             logmsg("pcap_open_live failed for interface %s", d->name);
-            acktrack_freeip4devs(f); // well, this is misnamed now
+            acktrack_freedevs(f);
             free(descr);
             return 2;
             }
@@ -786,7 +786,7 @@ int acktrack_opencap(acktrack_t *acktrack)
         // // if (pcap_compile(descr[i].handle, &fp, filter, 0, PCAP_NETMASK_UNKNOWN) == -1) {
         // if (pcap_compile(descr[i], &(acktrack->bpfp), filter, 0, PCAP_NETMASK_UNKNOWN) == -1) {
             logmsg("pcap_compile failed");
-            acktrack_freeip4devs(f); // well, this is misnamed now
+            acktrack_freedevs(f);
             free(descr);
             return 3;
             }
@@ -796,7 +796,7 @@ int acktrack_opencap(acktrack_t *acktrack)
         if (pcap_setfilter(descr[i].handle, descr[i].bpfp) == -1) {
         // if (pcap_setfilter(descr[i], &(acktrack->bpfp)) == -1) {
             logmsg("pcap_setfilter failed");
-            acktrack_freeip4devs(f); // well, this is misnamed now
+            acktrack_freedevs(f);
             acktrack_cap_free(descr);
             free(descr);
             return 4;
@@ -813,7 +813,7 @@ int acktrack_opencap(acktrack_t *acktrack)
     //descr[i] = NULL;
 
     pcap_freealldevs(alldevs);
-    acktrack_freeip4devs(f); // well, this is misnamed now
+    acktrack_freedevs(f);
 
     acktrack->caps = descr;
 
