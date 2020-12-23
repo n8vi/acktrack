@@ -650,6 +650,18 @@ void test_acktrack_create_fromstrings(void)
     CU_ASSERT(!strcmp(get_ip_str((struct sockaddr*)&(a->remote)), "2.2.2.2"));
 
     acktrack_free(a);
+
+    a = acktrack_create_fromstrings("[1::1]:1", "[2::2]:2");
+
+    CU_ASSERT(ntohs(get_port((struct sockaddr*)&(a->local))) == 1);
+    CU_ASSERT(ntohs(get_port((struct sockaddr*)&(a->remote))) == 2);
+
+    CU_ASSERT(!strcmp(get_ip_str((struct sockaddr*)&(a->local)), "1::1"));
+    CU_ASSERT(!strcmp(get_ip_str((struct sockaddr*)&(a->remote)), "2::2"));
+
+    acktrack_free(a);
+
+   
 }
 
 
