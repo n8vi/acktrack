@@ -264,9 +264,13 @@ void check_socket_filter(const char *endpoint)
 }
 
 
-void test_socket_filter(void)
+void test_socket_filter_v4(void)
 {
 	check_socket_filter("8.8.8.8:53");
+}
+
+void test_socket_filter_v6(void)
+{
 	check_socket_filter("[2001:4860:4860::8888]:53");
 }
 
@@ -688,7 +692,8 @@ int main(void)
        (NULL == CU_add_test(pSuite, "remote relseq()", test_relseq_rseq)) ||
        (NULL == CU_add_test(pSuite, "local relseq()", test_relseq_lseq)) ||
        (NULL == CU_add_test(pSuite, "lseq, rseq, lack, and rack", test_acktrack_t))||
-       (NULL == CU_add_test(pSuite, "filter generated from socket", test_socket_filter)) ||
+       (NULL == CU_add_test(pSuite, "filter generated from v4 socket", test_socket_filter_v4)) ||
+       (NULL == CU_add_test(pSuite, "filter generated from v6 socket", test_socket_filter_v6)) ||
        (NULL == CU_add_test(pSuite, "isfinishing()", test_isfinishing)) ||
        (NULL == CU_add_test(pSuite, "isfinished()", test_isfinished)) ||
        (NULL == CU_add_test(pSuite, "logmsg()", test_logmsg)) ||
